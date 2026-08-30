@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Vite and build output
+dist/
+.vite/
+*.tsbuildinfo
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs and coverage
+*.log
+coverage/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local browser / scraping artifacts
+.playwright-cli/
+.firecrawl/
+
+# Generated visual QA captures
+qa/
+qa-*.png
+desktop-*.png
+forbidden-city-*.png
+forbidden-city-*.jpg
+daniels-reference-*.png
+daniels-reference-*.jpg
+
+# Keep public/models/*.glb tracked: the production app loads the generated model from there.

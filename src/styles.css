@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  color: #e9e7dd;
+  background: #0d1110;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --ink: #e9e7dd;
+  --muted: #8f9893;
+  --line: rgba(222, 224, 204, 0.16);
+  --panel: rgba(17, 22, 20, 0.82);
+  --panel-solid: #121817;
+  --gold: #e2ae53;
+  --vermilion: #d86445;
+  --teal: #78b2a1;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { min-height: 100%; margin: 0; }
+
+body { min-width: 320px; overflow: hidden; background: #0d1110; }
+
+button, a { color: inherit; }
+button { font: inherit; }
+
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 54% 48%, rgba(44, 78, 68, 0.12), transparent 37%),
+    radial-gradient(circle at 12% 10%, rgba(198, 145, 58, 0.05), transparent 28%),
+    #0d1110;
+}
+
+::selection { background: rgba(226, 174, 83, 0.36); color: #fff8e6; }
+
+.display-serif { font-family: 'Playfair Display', Georgia, serif; }
+.micro { font-family: 'DM Mono', ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.glass-panel {
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(26, 33, 30, 0.85), rgba(11, 16, 15, 0.76));
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.24), inset 0 1px rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(20px);
+}
+
+.hairline { background: linear-gradient(90deg, transparent, rgba(226, 174, 83, 0.62), transparent); height: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.atlas-noise {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .18;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+.canvas-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.canvas-layer > div {
+  height: 100%;
+  width: 100%;
+}
+
+.ui-layer {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  min-height: 100dvh;
+  pointer-events: none;
+}
+
+.ui-layer > * {
+  pointer-events: auto;
+}
+
+.ui-layer > .atlas-hero {
+  pointer-events: none;
+}
+
+.ui-layer > .atlas-hero .atlas-cta {
+  pointer-events: auto;
+}
+
+.scene-fallback {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  height: 100%;
+  color: var(--muted);
+  background: radial-gradient(circle, rgba(61, 91, 80, .12), transparent 42%), #0d1110;
+}
+
+.scene-fallback__mark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(226, 174, 83, .55);
+  border-radius: 50%;
+  box-shadow: 0 0 0 7px rgba(226, 174, 83, .08), inset 0 0 0 7px rgba(226, 174, 83, .08);
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(.82); opacity: .62; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (max-width: 800px) {
+  .atlas-hero {
+    top: 106px;
+    left: 20px;
+    width: min(330px, calc(100vw - 40px));
+  }
+
+  .atlas-hero__title {
+    font-size: clamp(2.15rem, 10vw, 3.2rem);
+  }
+
+  .atlas-hero__description {
+    max-width: 270px;
+    font-size: .7rem;
+    line-height: 1.6;
+  }
+
+  .atlas-hero__meta {
+    display: none;
+  }
+}
+
+
+@media (max-width: 820px) {
+  .ui-layer.has-selection .discovery-rail { display: none; }
+  .ui-layer.has-selection .atlas-hero {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.app-toast {
+  position: fixed;
+  z-index: 80;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  color: var(--atlas-paper);
+  font-family: var(--atlas-mono);
+  font-size: .58rem;
+  letter-spacing: .06em;
+  animation: atlas-toast-in 420ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.app-toast .status-dot {
+  flex: 0 0 auto;
+  background: var(--atlas-teal);
+  box-shadow: 0 0 0 4px rgba(134,181,163,.1);
+}
+
+@keyframes atlas-toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 520px) {
+  .app-toast {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    justify-content: center;
+  }
+}
+
+
+.scene-reset { top: 92px !important; right: 28px !important; }
+
+.scene-control-overlay { z-index: 5; pointer-events: none !important; }
+.scene-control-overlay button { pointer-events: auto !important; }
+
+@media (max-width: 820px) {
+  .scene-reset { top: 78px !important; right: 18px !important; }
+}
