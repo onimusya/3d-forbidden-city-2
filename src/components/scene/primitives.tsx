@@ -574,6 +574,7 @@ export function LandmarkBeacon({
   const anchor: Vec3 = [landmark.position[0], Math.max(0.32, landmark.position[1]), landmark.position[2]]
   const markerScale = Math.max(0.7, landmark.scale)
   const hitSize = LANDMARK_HIT_SIZES[landmark.id] ?? [Math.max(4.2, markerScale * 2.8), 3.8, Math.max(3.4, markerScale * 2.3)]
+  const starScale = Math.max(1.15, markerScale * 0.8)
   const starShape = useMemo(() => {
     const shape = new THREE.Shape()
     const points = 8
@@ -601,7 +602,7 @@ export function LandmarkBeacon({
       haloRef.current.rotation.z += delta * 0.26
     }
     if (starRef.current) {
-      starRef.current.scale.setScalar((active ? 1.08 : 0.86) + pulse * (active ? 0.16 : 0.09))
+      starRef.current.scale.setScalar(starScale * ((active ? 1.08 : 0.86) + pulse * (active ? 0.16 : 0.09)))
       starRef.current.rotation.y += delta * (active ? 1.35 : 0.52)
       starRef.current.rotation.z = Math.sin(clock.elapsedTime * 1.4 + phase) * (active ? 0.12 : 0.07)
     }
@@ -632,16 +633,19 @@ export function LandmarkBeacon({
           <sphereGeometry args={[0.06, 8, 6]} />
           <meshBasicMaterial color="#fff1bb" />
         </mesh>
-        <group ref={starRef} position={[0, 2.08, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+        <group ref={starRef} position={[0, 2.15 * starScale, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={20}>
             <shapeGeometry args={[starShape]} />
-            <meshBasicMaterial color={accent} transparent opacity={active ? 0.96 : 0.62} depthWrite={false} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={active ? "#fff1bb" : landmark.accent} transparent opacity={active ? 0.98 : 0.84} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} renderOrder={2}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} renderOrder={19}>
             <ringGeometry args={[0.54, 0.58, 24]} />
-            <meshBasicMaterial color={accent} transparent opacity={active ? 0.72 : 0.24} depthWrite={false} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={landmark.accent} transparent opacity={active ? 0.82 : 0.46} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
           </mesh>
         </group>
+        <Html position={[0, 2.15 * starScale, 0]} center zIndexRange={[25, 0]} pointerEvents="none">
+          <div className="landmark-star-cue" data-active={active ? "true" : "false"} style={{ color: active ? "#fff1bb" : landmark.accent }} aria-hidden="true">✦</div>
+        </Html>
       </group>
       <mesh
         position={[0, 1.45, 0]}
@@ -663,7 +667,7 @@ export function LandmarkBeacon({
       </mesh>
       {active && <pointLight color={accent} intensity={selected ? 1.25 : 0.65} distance={3.8} decay={2} position={[0, 1.3, 0]} />}
       {showLabel && (
-        <Html position={[0, 2.45, 0]} center zIndexRange={[30, 0]} pointerEvents="none">
+        <Html position={[0, 2.7 * starScale, 0]} center zIndexRange={[30, 0]} pointerEvents="none">
           <div
             style={{
               minWidth: 148,
