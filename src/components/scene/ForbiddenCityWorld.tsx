@@ -35,7 +35,7 @@ function landmarkInteraction(id: string, onSelect: ForbiddenCityWorldProps["onSe
   }
 }
 
-const FORBIDDEN_CITY_MODEL_URL = "/models/forbidden-city-atlas.glb"
+const FORBIDDEN_CITY_MODEL_URL = import.meta.env.BASE_URL + 'models/forbidden-city-atlas.glb'
 
 function ForbiddenCityModel() {
   const { scene } = useGLTF(FORBIDDEN_CITY_MODEL_URL)
