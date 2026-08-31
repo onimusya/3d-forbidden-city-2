@@ -562,6 +562,7 @@ export function LandmarkBeacon({
 }: LandmarkBeaconProps) {
   const beaconRef = useRef<THREE.Group | null>(null)
   const haloRef = useRef<THREE.Mesh | null>(null)
+  const starRef = useRef<THREE.Group | null>(null)
   const phase = useMemo(() => {
     let total = 0
     for (const character of landmark.id) total += character.charCodeAt(0)
@@ -573,6 +574,20 @@ export function LandmarkBeacon({
   const anchor: Vec3 = [landmark.position[0], Math.max(0.32, landmark.position[1]), landmark.position[2]]
   const markerScale = Math.max(0.7, landmark.scale)
   const hitSize = LANDMARK_HIT_SIZES[landmark.id] ?? [Math.max(4.2, markerScale * 2.8), 3.8, Math.max(3.4, markerScale * 2.3)]
+  const starShape = useMemo(() => {
+    const shape = new THREE.Shape()
+    const points = 8
+    for (let index = 0; index < points; index += 1) {
+      const angle = Math.PI / 2 + (index / points) * Math.PI * 2
+      const radius = index % 2 === 0 ? 0.48 : 0.16
+      const x = Math.cos(angle) * radius
+      const y = Math.sin(angle) * radius
+      if (index === 0) shape.moveTo(x, y)
+      else shape.lineTo(x, y)
+    }
+    shape.closePath()
+    return shape
+  }, [])
 
   useFrame(({ clock }, delta) => {
     const pulse = (Math.sin(clock.elapsedTime * 2.1 + phase) + 1) / 2
@@ -584,6 +599,11 @@ export function LandmarkBeacon({
     if (haloRef.current) {
       haloRef.current.scale.setScalar((active ? 1.08 : 1) + pulse * (active ? 0.18 : 0.08))
       haloRef.current.rotation.z += delta * 0.26
+    }
+    if (starRef.current) {
+      starRef.current.scale.setScalar((active ? 1.08 : 0.86) + pulse * (active ? 0.16 : 0.09))
+      starRef.current.rotation.y += delta * (active ? 1.35 : 0.52)
+      starRef.current.rotation.z = Math.sin(clock.elapsedTime * 1.4 + phase) * (active ? 0.12 : 0.07)
     }
   })
 
@@ -612,6 +632,16 @@ export function LandmarkBeacon({
           <sphereGeometry args={[0.06, 8, 6]} />
           <meshBasicMaterial color="#fff1bb" />
         </mesh>
+        <group ref={starRef} position={[0, 2.08, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+            <shapeGeometry args={[starShape]} />
+            <meshBasicMaterial color={accent} transparent opacity={active ? 0.96 : 0.62} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} renderOrder={2}>
+            <ringGeometry args={[0.54, 0.58, 24]} />
+            <meshBasicMaterial color={accent} transparent opacity={active ? 0.72 : 0.24} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
       </group>
       <mesh
         position={[0, 1.45, 0]}
@@ -654,6 +684,7 @@ export function LandmarkBeacon({
             </div>
             <div style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 16, lineHeight: 1.1 }}>{landmark.title}</div>
             <div style={{ color: '#9aa39d', fontSize: 11, marginTop: 4 }}>{landmark.chineseName}</div>
+            <div style={{ color: accent, fontFamily: "DM Mono, ui-monospace, monospace", fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 7 }}>Click to inspect ↗</div>
           </div>
         </Html>
       )}
