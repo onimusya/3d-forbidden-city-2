@@ -219,6 +219,11 @@ button { font: inherit; }
 .landmark-star-cue {
   display: grid;
   place-items: center;
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
   width: 28px;
   height: 28px;
   font-family: Georgia, "Times New Roman", serif;
@@ -227,8 +232,13 @@ button { font: inherit; }
   text-shadow: 0 0 5px currentColor, 0 0 14px currentColor;
   transform-origin: center;
   animation: landmark-star-spin 3.2s linear infinite, landmark-star-pulse 1.55s ease-in-out infinite;
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
+}
+
+.landmark-star-cue:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 4px;
 }
 
 .landmark-star-cue[data-active="true"] {

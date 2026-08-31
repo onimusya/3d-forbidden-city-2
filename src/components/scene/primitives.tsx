@@ -633,7 +633,14 @@ export function LandmarkBeacon({
           <sphereGeometry args={[0.06, 8, 6]} />
           <meshBasicMaterial color="#fff1bb" />
         </mesh>
-        <group ref={starRef} position={[0, 2.15 * starScale, 0]}>
+        <group
+          ref={starRef}
+          position={[0, 2.15 * starScale, 0]}
+          onClick={(event) => {
+            event.stopPropagation()
+            onSelect(landmark.id)
+          }}
+        >
           <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={20}>
             <shapeGeometry args={[starShape]} />
             <meshBasicMaterial color={active ? "#fff1bb" : landmark.accent} transparent opacity={active ? 0.98 : 0.84} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
@@ -643,8 +650,30 @@ export function LandmarkBeacon({
             <meshBasicMaterial color={landmark.accent} transparent opacity={active ? 0.82 : 0.46} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
           </mesh>
         </group>
-        <Html position={[0, 2.15 * starScale, 0]} center zIndexRange={[25, 0]} pointerEvents="none">
-          <div className="landmark-star-cue" data-active={active ? "true" : "false"} style={{ color: active ? "#fff1bb" : landmark.accent }} aria-hidden="true">✦</div>
+        <Html position={[0, 2.15 * starScale, 0]} center zIndexRange={[25, 0]} pointerEvents="auto">
+          <button
+            className="landmark-star-cue"
+            type="button"
+            aria-label={"Open " + landmark.title + " details"}
+            title={"Open " + landmark.title + " details"}
+            data-active={active ? "true" : "false"}
+            style={{ color: active ? "#fff1bb" : landmark.accent }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onPointerOver={(event) => {
+              event.stopPropagation()
+              onHover(landmark.id)
+            }}
+            onPointerOut={(event) => {
+              event.stopPropagation()
+              onHover(null)
+            }}
+            onClick={(event) => {
+              event.stopPropagation()
+              onSelect(landmark.id)
+            }}
+          >
+            ✦
+          </button>
         </Html>
       </group>
       <mesh
