@@ -488,7 +488,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 2.2,
     phase: 0.6,
     groundY: 0.58,
-    scale: 2.2,
+    scale: 1.38,
   },
   {
     id: 'west-courtyard-walker',
@@ -504,7 +504,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 1.8,
     phase: 2.7,
     groundY: 0.56,
-    scale: 2.05,
+    scale: 1.25,
   },
   {
     id: 'courier-runner',
@@ -519,7 +519,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 6.2,
     phase: 4.1,
     groundY: 0.62,
-    scale: 2.05,
+    scale: 1.22,
   },
   {
     id: 'garden-player',
@@ -534,7 +534,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 1.4,
     phase: 1.2,
     groundY: 0.55,
-    scale: 2.25,
+    scale: 1.3,
   },
   {
     id: 'screen-observer',
@@ -544,7 +544,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 0,
     phase: 0.4,
     groundY: 0.57,
-    scale: 1.7,
+    scale: 1.3,
     heading: -Math.PI / 2,
   },
   {
@@ -560,7 +560,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 1.3,
     phase: 3.8,
     groundY: 0.57,
-    scale: 1.85,
+    scale: 1.12,
   },
 ]
 
