@@ -15,6 +15,7 @@ export type MapSceneProps = {
   onResetView?: () => void
   resetViewSignal?: number
   language?: 'en' | 'zh'
+  onReady?: () => void
 }
 
 const BASE_MAP_WIDTH = 86
@@ -243,7 +244,7 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
   )
 }
 
-export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en' }: MapSceneProps) {
+export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en', onReady }: MapSceneProps) {
   return (
     <Canvas
       orthographic
@@ -283,6 +284,7 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHov
         discoveredIds={discoveredIds}
         onSelect={onSelect}
         onHover={onHover}
+        onReady={onReady}
       />
     </Canvas>
   )

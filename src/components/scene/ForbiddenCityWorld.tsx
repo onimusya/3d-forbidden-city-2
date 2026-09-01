@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from "react"
+import { Suspense, useEffect, useMemo } from "react"
 import { useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { SCENE_LANDMARKS, type SceneLandmark } from './landmarkData'
@@ -17,6 +17,7 @@ import {
   point,
 } from './primitives'
 import type { BuildingInteractionProps, Vec3 } from './primitives'
+import { registerAtlasLoadingManager } from '../../lib/atlasLoading'
 
 export type ForbiddenCityWorldProps = {
   selectedId: string | null
@@ -24,6 +25,7 @@ export type ForbiddenCityWorldProps = {
   discoveredIds: readonly string[]
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
+  onReady?: () => void
 }
 
 type LandmarkEventProps = Pick<ForbiddenCityWorldProps, "onSelect" | "onHover">
@@ -37,7 +39,7 @@ function landmarkInteraction(id: string, onSelect: ForbiddenCityWorldProps["onSe
 
 const FORBIDDEN_CITY_MODEL_URL = import.meta.env.BASE_URL + 'models/forbidden-city-atlas.glb'
 
-function ForbiddenCityModel() {
+function ForbiddenCityModel({ onReady }: { onReady?: () => void }) {
   const { scene } = useGLTF(FORBIDDEN_CITY_MODEL_URL)
   const model = useMemo(() => {
     const clone = scene.clone(true)
@@ -50,9 +52,14 @@ function ForbiddenCityModel() {
     return clone
   }, [scene])
 
+  useEffect(() => {
+    onReady?.()
+  }, [onReady, scene])
+
   return <primitive object={model} />
 }
 
+registerAtlasLoadingManager(THREE.DefaultLoadingManager)
 useGLTF.preload(FORBIDDEN_CITY_MODEL_URL)
 
 type CourtyardProps = {
@@ -412,11 +419,11 @@ function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHov
 }
 
 
-export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover }: ForbiddenCityWorldProps) {
+export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onReady }: ForbiddenCityWorldProps) {
   return (
     <group>
       <Suspense fallback={<ProceduralWorld selectedId={selectedId} hoveredId={hoveredId} discoveredIds={discoveredIds} onSelect={onSelect} onHover={onHover} />}>
-        <ForbiddenCityModel />
+        <ForbiddenCityModel onReady={onReady} />
       </Suspense>
       <LandmarkLayer
         landmarks={SCENE_LANDMARKS}

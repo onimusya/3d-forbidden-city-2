@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { gsap } from "gsap"
 import { AtlasHero } from "./components/AtlasHero"
+import { AtlasPreloader } from "./components/AtlasPreloader"
 import { DiscoveryRail, type DiscoveryLandmark } from "./components/DiscoveryRail"
 import { InteractionHint } from "./components/InteractionHint"
 import { ProgressPage } from "./components/ProgressPage"
@@ -63,6 +64,8 @@ function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], lang
 export default function App() {
   const shellRef = useRef<HTMLElement>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [sceneReady, setSceneReady] = useState(false)
+  const [sceneTimedOut, setSceneTimedOut] = useState(false)
   const {
     selectedId,
     hoveredId,
@@ -83,6 +86,13 @@ export default function App() {
   } = useAtlasStore()
 
   const { playSfx, startBgm } = useAtlasAudio(soundEnabled)
+  const handleSceneReady = useCallback(() => setSceneReady(true), [])
+
+  useEffect(() => {
+    if (sceneReady) return undefined
+    const timeout = window.setTimeout(() => setSceneTimedOut(true), 12000)
+    return () => window.clearTimeout(timeout)
+  }, [sceneReady])
 
   const selectedLandmark = useMemo(
     () => LANDMARKS.find((landmark) => landmark.id === selectedId) ?? null,
@@ -173,8 +183,9 @@ export default function App() {
   }
 
   return (
-    <main ref={shellRef} className="app-shell">
+    <main ref={shellRef} className="app-shell" aria-busy={!sceneReady && !sceneTimedOut}>
       <div className="atlas-noise" aria-hidden="true" />
+      <AtlasPreloader language={language} ready={sceneReady || sceneTimedOut} usingFallback={sceneTimedOut && !sceneReady} />
       <div className="canvas-layer" aria-label={language === "en" ? "Interactive isometric map of the Forbidden City" : "故宫互动等距地图"}>
         <Suspense fallback={<SceneFallback />}>
           <MapScene
@@ -186,6 +197,7 @@ export default function App() {
             onHover={setHovered}
             onResetView={handleResetView}
             language={language}
+            onReady={handleSceneReady}
           />
         </Suspense>
       </div>
