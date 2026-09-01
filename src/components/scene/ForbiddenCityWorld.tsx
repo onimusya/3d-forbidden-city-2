@@ -485,10 +485,10 @@ const VISITORS: readonly VisitorConfig[] = [
       [6.15, -1.8],
       [6.15, -7.7],
     ],
-    speed: 1.45,
+    speed: 2.2,
     phase: 0.6,
     groundY: 0.58,
-    scale: 1.38,
+    scale: 2.2,
   },
   {
     id: 'west-courtyard-walker',
@@ -501,10 +501,10 @@ const VISITORS: readonly VisitorConfig[] = [
       [-9.2, -2.3],
       [-9.2, -7.2],
     ],
-    speed: 1.12,
+    speed: 1.8,
     phase: 2.7,
     groundY: 0.56,
-    scale: 1.25,
+    scale: 2.05,
   },
   {
     id: 'courier-runner',
@@ -516,10 +516,10 @@ const VISITORS: readonly VisitorConfig[] = [
       [9.4, 14.8],
       [-9.4, 14.8],
     ],
-    speed: 4.15,
+    speed: 6.2,
     phase: 4.1,
     groundY: 0.62,
-    scale: 1.22,
+    scale: 2.05,
   },
   {
     id: 'garden-player',
@@ -531,10 +531,10 @@ const VISITORS: readonly VisitorConfig[] = [
       [14.4, -17.3],
       [14.4, -14.9],
     ],
-    speed: 0.76,
+    speed: 1.4,
     phase: 1.2,
     groundY: 0.55,
-    scale: 1.3,
+    scale: 2.25,
   },
   {
     id: 'screen-observer',
@@ -544,7 +544,7 @@ const VISITORS: readonly VisitorConfig[] = [
     speed: 0,
     phase: 0.4,
     groundY: 0.57,
-    scale: 1.3,
+    scale: 1.7,
     heading: -Math.PI / 2,
   },
   {
@@ -557,10 +557,10 @@ const VISITORS: readonly VisitorConfig[] = [
       [8.2, -17.4],
       [8.2, -15],
     ],
-    speed: 0.86,
+    speed: 1.3,
     phase: 3.8,
     groundY: 0.57,
-    scale: 1.12,
+    scale: 1.85,
   },
 ]
 
@@ -582,6 +582,11 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
   const rightLegRef = useRef<THREE.Group>(null)
   const ballRef = useRef<THREE.Mesh>(null)
   const directionRef = useRef(new THREE.Vector3())
+  const elapsedRef = useRef(0)
+  const motionRingRef = useRef<THREE.Mesh>(null)
+  const motionBadgeRef = useRef<THREE.Mesh>(null)
+  const trailRef = useRef<THREE.Mesh>(null)
+  const trailMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
   const palette = VISITOR_PALETTES[config.palette]
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -606,11 +611,27 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
     }
   }, [config])
 
-  useFrame(({ clock }) => {
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
 
-    const elapsed = reducedMotion ? 0 : clock.elapsedTime
+    root.traverse((object) => {
+      object.renderOrder = object.name === 'visitor-shadow' ? 8 : 12
+      if (!(object instanceof THREE.Mesh) || object.name === 'visitor-shadow') return
+      const materials = Array.isArray(object.material) ? object.material : [object.material]
+      materials.forEach((material) => {
+        material.depthTest = false
+        material.depthWrite = false
+      })
+    })
+  }, [])
+
+  useFrame((_, delta) => {
+    elapsedRef.current += delta
+    const root = rootRef.current
+    if (!root) return
+
+    const elapsed = elapsedRef.current * (reducedMotion ? 0.22 : 1)
     const distance = route.total > 0 ? (elapsed * config.speed + config.phase) % route.total : 0
     let segment = route.segments[route.segments.length - 1]
     let remaining = distance
@@ -641,24 +662,45 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
     const cycle = elapsed * cycleRate + config.phase
     const gait = Math.sin(cycle)
     const bounce = config.action === 'play'
-      ? Math.abs(Math.sin(cycle * 0.95)) * 0.07
-      : Math.abs(gait) * (isRunning ? 0.035 : 0.018)
+      ? Math.abs(Math.sin(cycle * 0.95)) * 0.23
+      : Math.abs(gait) * (isRunning ? 0.14 : isWalking ? 0.11 : 0.08)
 
     root.position.y = config.groundY + bounce
+    root.scale.setScalar(config.scale * (1 + Math.sin(cycle * 0.46 + 0.5) * (config.action === 'observe' ? 0.028 : 0.018)))
+    root.rotation.z = isRunning ? Math.sin(cycle * 0.7) * 0.12 : config.action === 'play' ? Math.sin(cycle * 0.65) * 0.14 : isWalking ? Math.sin(cycle * 0.7) * 0.055 : Math.sin(cycle * 0.45) * 0.04
 
-    const stride = isRunning ? 0.76 : isWalking ? 0.38 : config.action === 'play' ? 0.2 : 0.04
+    if (motionRingRef.current) {
+      const pulse = (Math.sin(cycle * 1.45) + 1) / 2
+      const pulseScale = 1 + pulse * (isRunning ? 0.48 : config.action === 'play' ? 0.38 : 0.24)
+      motionRingRef.current.scale.setScalar(pulseScale)
+      motionRingRef.current.rotation.z = cycle * 0.42
+    }
+    if (motionBadgeRef.current) {
+      const badgePulse = (Math.sin(cycle * 1.25 + 0.6) + 1) / 2
+      motionBadgeRef.current.scale.setScalar(0.72 + badgePulse * (config.action === 'run' ? 0.58 : 0.38))
+      motionBadgeRef.current.position.y = 1.12 + Math.sin(cycle * 0.8 + config.phase) * 0.08
+      motionBadgeRef.current.rotation.y = cycle * 0.9
+      motionBadgeRef.current.rotation.z = cycle * 0.32
+    }
+    if (trailRef.current && trailMaterialRef.current) {
+      const trailPulse = (Math.sin(cycle * 1.2) + 1) / 2
+      trailRef.current.scale.set(0.7 + trailPulse * 0.3, 0.65 + trailPulse * 0.45, 1)
+      trailMaterialRef.current.opacity = 0.1 + trailPulse * 0.14
+    }
+
+    const stride = isRunning ? 1.35 : isWalking ? 0.9 : config.action === 'play' ? 0.45 : 0.12
     if (leftLegRef.current) leftLegRef.current.rotation.x = gait * stride
     if (rightLegRef.current) rightLegRef.current.rotation.x = -gait * stride
     if (leftArmRef.current) leftArmRef.current.rotation.x = -gait * stride * 0.72
     if (rightArmRef.current) rightArmRef.current.rotation.x = gait * stride * 0.72
 
     if (bodyRef.current) {
-      bodyRef.current.rotation.x = isRunning ? -0.13 : 0
-      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.06 : 0
+      bodyRef.current.rotation.x = isRunning ? -0.3 : isWalking ? Math.sin(cycle * 0.7) * 0.06 : 0
+      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.12 : 0
     }
     if (headRef.current) {
-      headRef.current.rotation.y = config.action === 'observe' ? Math.sin(cycle * 0.25) * 0.18 : 0
-      headRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.04 : 0
+      headRef.current.rotation.y = config.action === 'observe' ? Math.sin(cycle * 0.25) * 0.32 : isWalking ? Math.sin(cycle * 0.42) * 0.14 : 0
+      headRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.08 : 0
     }
 
     if (config.action === 'play') {
@@ -679,10 +721,27 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
 
   return (
     <group ref={rootRef} name={config.id} scale={config.scale}>
-      <mesh raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -config.groundY + 0.035, 0]} scale={[0.44, 0.28, 1]}>
+      <mesh name="visitor-shadow" raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -config.groundY + 0.035, 0]} scale={[0.44, 0.28, 1]}>
         <circleGeometry args={[0.46, 20]} />
         <meshBasicMaterial color="#050908" transparent opacity={0.3} depthWrite={false} />
       </mesh>
+
+      <mesh ref={motionRingRef} raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -config.groundY + 0.05, 0]}>
+        <ringGeometry args={[0.31, 0.4, 24]} />
+        <meshBasicMaterial color={palette.accent} transparent opacity={0.46} depthWrite={false} />
+      </mesh>
+
+      <mesh ref={motionBadgeRef} raycast={NO_RAYCAST} position={[0, 1.12, 0]}>
+        <octahedronGeometry args={[0.105, 0]} />
+        <meshBasicMaterial color={palette.accent} transparent opacity={0.86} depthWrite={false} />
+      </mesh>
+
+      {config.action === 'run' && (
+        <mesh ref={trailRef} raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -config.groundY + 0.045, -0.52]}>
+          <planeGeometry args={[0.25, 1.35]} />
+          <meshBasicMaterial ref={trailMaterialRef} color={palette.accent} transparent opacity={0.16} depthWrite={false} />
+        </mesh>
+      )}
 
       <mesh ref={bodyRef} raycast={NO_RAYCAST} castShadow position={[0, 0.49, 0]}>
         <boxGeometry args={[0.24, 0.37, 0.17]} />
