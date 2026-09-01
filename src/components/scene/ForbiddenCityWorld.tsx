@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useMemo } from "react"
+import { Suspense, useEffect, useMemo, useRef } from "react"
+import { useFrame } from "@react-three/fiber"
 import { useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { SCENE_LANDMARKS, type SceneLandmark } from './landmarkData'
@@ -419,12 +420,368 @@ function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHov
 }
 
 
+type VisitorAction = 'tour' | 'run' | 'play' | 'observe'
+
+type VisitorPalette = {
+  coat: string
+  garment: string
+  skin: string
+  hair: string
+  accent: string
+}
+
+type VisitorConfig = {
+  id: string
+  action: VisitorAction
+  palette: keyof typeof VISITOR_PALETTES
+  route: readonly (readonly [number, number])[]
+  speed: number
+  phase: number
+  groundY: number
+  scale: number
+  heading?: number
+}
+
+const VISITOR_PALETTES: Record<string, VisitorPalette> = {
+  jade: {
+    coat: '#2f5f54',
+    garment: '#d4ab5c',
+    skin: '#d59f7c',
+    hair: '#26231e',
+    accent: '#e3c77f',
+  },
+  vermilion: {
+    coat: '#8c4033',
+    garment: '#e8c995',
+    skin: '#dca681',
+    hair: '#241f1a',
+    accent: '#f0d073',
+  },
+  indigo: {
+    coat: '#344c69',
+    garment: '#d9bd78',
+    skin: '#c99472',
+    hair: '#201e1b',
+    accent: '#d9a34f',
+  },
+  teal: {
+    coat: '#287172',
+    garment: '#efca87',
+    skin: '#d6a17c',
+    hair: '#25231e',
+    accent: '#e46743',
+  },
+}
+
+const VISITORS: readonly VisitorConfig[] = [
+  {
+    id: 'axis-tourist',
+    action: 'tour',
+    palette: 'jade',
+    route: [
+      [6.15, 15.2],
+      [6.15, 10],
+      [6.15, 4.5],
+      [6.15, -1.8],
+      [6.15, -7.7],
+    ],
+    speed: 1.45,
+    phase: 0.6,
+    groundY: 0.58,
+    scale: 1.38,
+  },
+  {
+    id: 'west-courtyard-walker',
+    action: 'tour',
+    palette: 'vermilion',
+    route: [
+      [-9.2, 15],
+      [-9.2, 9.9],
+      [-9.2, 4.1],
+      [-9.2, -2.3],
+      [-9.2, -7.2],
+    ],
+    speed: 1.12,
+    phase: 2.7,
+    groundY: 0.56,
+    scale: 1.25,
+  },
+  {
+    id: 'courier-runner',
+    action: 'run',
+    palette: 'indigo',
+    route: [
+      [-9.4, 9.35],
+      [9.4, 9.35],
+      [9.4, 14.8],
+      [-9.4, 14.8],
+    ],
+    speed: 4.15,
+    phase: 4.1,
+    groundY: 0.62,
+    scale: 1.22,
+  },
+  {
+    id: 'garden-player',
+    action: 'play',
+    palette: 'teal',
+    route: [
+      [8.1, -12.5],
+      [8.1, -17.3],
+      [14.4, -17.3],
+      [14.4, -14.9],
+    ],
+    speed: 0.76,
+    phase: 1.2,
+    groundY: 0.55,
+    scale: 1.3,
+  },
+  {
+    id: 'screen-observer',
+    action: 'observe',
+    palette: 'vermilion',
+    route: [[15.7, 4.7]],
+    speed: 0,
+    phase: 0.4,
+    groundY: 0.57,
+    scale: 1.3,
+    heading: -Math.PI / 2,
+  },
+  {
+    id: 'east-garden-stroller',
+    action: 'tour',
+    palette: 'jade',
+    route: [
+      [14.7, -13.2],
+      [14.7, -17.4],
+      [8.2, -17.4],
+      [8.2, -15],
+    ],
+    speed: 0.86,
+    phase: 3.8,
+    groundY: 0.57,
+    scale: 1.12,
+  },
+]
+
+const NO_RAYCAST: THREE.Object3D['raycast'] = () => undefined
+
+type RouteSegment = {
+  from: THREE.Vector3
+  to: THREE.Vector3
+  length: number
+}
+
+function VisitorActor({ config }: { config: VisitorConfig }) {
+  const rootRef = useRef<THREE.Group>(null)
+  const bodyRef = useRef<THREE.Mesh>(null)
+  const headRef = useRef<THREE.Mesh>(null)
+  const leftArmRef = useRef<THREE.Group>(null)
+  const rightArmRef = useRef<THREE.Group>(null)
+  const leftLegRef = useRef<THREE.Group>(null)
+  const rightLegRef = useRef<THREE.Group>(null)
+  const ballRef = useRef<THREE.Mesh>(null)
+  const directionRef = useRef(new THREE.Vector3())
+  const palette = VISITOR_PALETTES[config.palette]
+  const reducedMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  )
+  const route = useMemo(() => {
+    const points = config.route.map(([x, z]) => new THREE.Vector3(x, 0, z))
+    const segments: RouteSegment[] = []
+
+    if (points.length > 1) {
+      points.forEach((from, index) => {
+        const to = points[(index + 1) % points.length]
+        const length = from.distanceTo(to)
+        if (length > 0.001) segments.push({ from, to, length })
+      })
+    }
+
+    return {
+      first: points[0] ?? new THREE.Vector3(),
+      segments,
+      total: segments.reduce((sum, segment) => sum + segment.length, 0),
+    }
+  }, [config])
+
+  useFrame(({ clock }) => {
+    const root = rootRef.current
+    if (!root) return
+
+    const elapsed = reducedMotion ? 0 : clock.elapsedTime
+    const distance = route.total > 0 ? (elapsed * config.speed + config.phase) % route.total : 0
+    let segment = route.segments[route.segments.length - 1]
+    let remaining = distance
+
+    for (const candidate of route.segments) {
+      if (remaining <= candidate.length) {
+        segment = candidate
+        break
+      }
+      remaining -= candidate.length
+    }
+
+    if (segment) {
+      const amount = Math.min(1, remaining / segment.length)
+      root.position.x = THREE.MathUtils.lerp(segment.from.x, segment.to.x, amount)
+      root.position.z = THREE.MathUtils.lerp(segment.from.z, segment.to.z, amount)
+      directionRef.current.subVectors(segment.to, segment.from).normalize()
+      root.rotation.y = Math.atan2(directionRef.current.x, directionRef.current.z)
+    } else {
+      root.position.x = route.first.x
+      root.position.z = route.first.z
+      root.rotation.y = config.heading ?? 0
+    }
+
+    const isRunning = config.action === 'run'
+    const isWalking = config.action === 'tour'
+    const cycleRate = isRunning ? 13 : config.action === 'play' ? 5 : 7
+    const cycle = elapsed * cycleRate + config.phase
+    const gait = Math.sin(cycle)
+    const bounce = config.action === 'play'
+      ? Math.abs(Math.sin(cycle * 0.95)) * 0.07
+      : Math.abs(gait) * (isRunning ? 0.035 : 0.018)
+
+    root.position.y = config.groundY + bounce
+
+    const stride = isRunning ? 0.76 : isWalking ? 0.38 : config.action === 'play' ? 0.2 : 0.04
+    if (leftLegRef.current) leftLegRef.current.rotation.x = gait * stride
+    if (rightLegRef.current) rightLegRef.current.rotation.x = -gait * stride
+    if (leftArmRef.current) leftArmRef.current.rotation.x = -gait * stride * 0.72
+    if (rightArmRef.current) rightArmRef.current.rotation.x = gait * stride * 0.72
+
+    if (bodyRef.current) {
+      bodyRef.current.rotation.x = isRunning ? -0.13 : 0
+      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.06 : 0
+    }
+    if (headRef.current) {
+      headRef.current.rotation.y = config.action === 'observe' ? Math.sin(cycle * 0.25) * 0.18 : 0
+      headRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.04 : 0
+    }
+
+    if (config.action === 'play') {
+      if (leftArmRef.current) leftArmRef.current.rotation.x = -0.52 - gait * 0.16
+      if (rightArmRef.current) rightArmRef.current.rotation.x = -0.82 + gait * 0.2
+      if (ballRef.current) {
+        ballRef.current.position.set(
+          0.28 + Math.sin(cycle * 0.76) * 0.24,
+          0.34 + Math.abs(Math.sin(cycle * 1.55)) * 0.29,
+          0.17 + Math.cos(cycle * 0.76) * 0.18,
+        )
+      }
+    } else if (config.action === 'observe') {
+      if (leftArmRef.current) leftArmRef.current.rotation.x = 0.18
+      if (rightArmRef.current) rightArmRef.current.rotation.x = -0.9
+    }
+  })
+
+  return (
+    <group ref={rootRef} name={config.id} scale={config.scale}>
+      <mesh raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -config.groundY + 0.035, 0]} scale={[0.44, 0.28, 1]}>
+        <circleGeometry args={[0.46, 20]} />
+        <meshBasicMaterial color="#050908" transparent opacity={0.3} depthWrite={false} />
+      </mesh>
+
+      <mesh ref={bodyRef} raycast={NO_RAYCAST} castShadow position={[0, 0.49, 0]}>
+        <boxGeometry args={[0.24, 0.37, 0.17]} />
+        <meshStandardMaterial color={palette.coat} roughness={0.82} />
+      </mesh>
+      <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.4, 0.09]}>
+        <boxGeometry args={[0.18, 0.07, 0.025]} />
+        <meshStandardMaterial color={palette.garment} roughness={0.72} />
+      </mesh>
+
+      <mesh ref={headRef} raycast={NO_RAYCAST} castShadow position={[0, 0.79, 0]}>
+        <icosahedronGeometry args={[0.115, 1]} />
+        <meshStandardMaterial color={palette.skin} roughness={0.88} flatShading />
+      </mesh>
+      <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.91, 0]}>
+        <coneGeometry args={[0.13, 0.09, 6]} />
+        <meshStandardMaterial color={palette.hair} roughness={0.9} flatShading />
+      </mesh>
+
+      <group ref={leftArmRef} position={[-0.17, 0.61, 0]}>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
+          <boxGeometry args={[0.065, 0.28, 0.065]} />
+          <meshStandardMaterial color={palette.coat} roughness={0.82} />
+        </mesh>
+      </group>
+      <group ref={rightArmRef} position={[0.17, 0.61, 0]}>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
+          <boxGeometry args={[0.065, 0.28, 0.065]} />
+          <meshStandardMaterial color={palette.coat} roughness={0.82} />
+        </mesh>
+      </group>
+
+      <group ref={leftLegRef} position={[-0.07, 0.29, 0]}>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
+          <boxGeometry args={[0.075, 0.28, 0.075]} />
+          <meshStandardMaterial color={palette.garment} roughness={0.8} />
+        </mesh>
+      </group>
+      <group ref={rightLegRef} position={[0.07, 0.29, 0]}>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
+          <boxGeometry args={[0.075, 0.28, 0.075]} />
+          <meshStandardMaterial color={palette.garment} roughness={0.8} />
+        </mesh>
+      </group>
+
+      {config.action === 'tour' && (
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.96, 0]}>
+          <cylinderGeometry args={[0.16, 0.14, 0.035, 12]} />
+          <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.1} />
+        </mesh>
+      )}
+
+      {config.action === 'run' && (
+        <mesh raycast={NO_RAYCAST} castShadow position={[-0.2, 0.47, -0.08]} rotation={[0, 0, -0.18]}>
+          <boxGeometry args={[0.13, 0.17, 0.08]} />
+          <meshStandardMaterial color={palette.accent} roughness={0.72} />
+        </mesh>
+      )}
+
+      {config.action === 'play' && (
+        <mesh ref={ballRef} raycast={NO_RAYCAST} castShadow position={[0.28, 0.42, 0.17]}>
+          <sphereGeometry args={[0.075, 12, 8]} />
+          <meshStandardMaterial color={palette.accent} emissive={palette.accent} emissiveIntensity={0.15} roughness={0.64} />
+        </mesh>
+      )}
+
+      {config.action === 'observe' && (
+        <group position={[0.16, 0.51, 0.15]} rotation={[-0.18, 0.14, -0.1]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <boxGeometry args={[0.18, 0.22, 0.025]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} position={[0, 0, 0.018]}>
+            <boxGeometry args={[0.12, 0.16, 0.01]} />
+            <meshStandardMaterial color="#25313a" emissive="#36525a" emissiveIntensity={0.35} roughness={0.42} />
+          </mesh>
+        </group>
+      )}
+    </group>
+  )
+}
+
+function VisitorsLayer() {
+  return (
+    <group name="visitors-layer">
+      {VISITORS.map((visitor) => (
+        <VisitorActor key={visitor.id} config={visitor} />
+      ))}
+    </group>
+  )
+}
+
 export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onReady }: ForbiddenCityWorldProps) {
   return (
     <group>
       <Suspense fallback={<ProceduralWorld selectedId={selectedId} hoveredId={hoveredId} discoveredIds={discoveredIds} onSelect={onSelect} onHover={onHover} />}>
         <ForbiddenCityModel onReady={onReady} />
       </Suspense>
+      <VisitorsLayer />
       <LandmarkLayer
         landmarks={SCENE_LANDMARKS}
         selectedId={selectedId}
