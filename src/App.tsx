@@ -178,6 +178,7 @@ export default function App() {
           landmarks={uiLandmarks}
           discoveredIds={discoveredIds}
           totalCount={LANDMARKS.length}
+          maxVisible={LANDMARKS.length}
           language={language}
           label={language === "en" ? "Known sites" : "已知地标"}
           onSelect={(landmark) => handleSelect(landmark.id)}

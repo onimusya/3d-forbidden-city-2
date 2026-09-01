@@ -709,6 +709,12 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
+  max-height: 186px;
+  overflow-y: auto;
+  padding-right: 3px;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(226, 174, 83, 0.42) transparent;
+  scrollbar-width: thin;
 }
 
 .discovery-card {
@@ -1594,11 +1600,7 @@
   }
 
   .discovery-rail__sites {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .discovery-card:nth-child(n + 3) {
-    display: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1684,7 +1686,9 @@
   .discovery-rail__sites {
     display: flex;
     gap: 6px;
-    overflow: auto;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 2px;
     scrollbar-width: none;
   }
@@ -1693,8 +1697,7 @@
     display: none;
   }
 
-  .discovery-card,
-  .discovery-card:nth-child(n + 3) {
+  .discovery-card {
     display: grid;
     flex: 0 0 172px;
   }
@@ -1913,8 +1916,7 @@
     scroll-snap-type: x proximity;
   }
 
-  .discovery-card,
-  .discovery-card:nth-child(n + 3) {
+  .discovery-card {
     flex-basis: 148px;
     scroll-snap-align: start;
   }
