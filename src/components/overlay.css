@@ -287,6 +287,11 @@
   background: rgba(226, 174, 83, 0.09);
 }
 
+.topbar-action--sound[aria-pressed="false"] {
+  border-color: var(--atlas-line);
+  color: var(--atlas-muted);
+}
+
 .topbar-menu {
   gap: 7px;
   padding: 0 0 0 10px;
@@ -1615,9 +1620,15 @@
   }
 
   .topbar-action--progress span,
+  .topbar-action--sound span,
   .topbar-menu > span,
   .topbar-menu__chevron {
     display: none;
+  }
+
+  .topbar-action--sound {
+    width: 31px;
+    padding: 0;
   }
 
   .topbar-action--progress {

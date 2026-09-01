@@ -5,6 +5,8 @@ import {
   ChevronDown,
   Languages,
   Menu,
+  Volume2,
+  VolumeX,
 } from "lucide-react"
 
 import "./overlay.css"
@@ -19,6 +21,8 @@ export interface TopBarProps {
   onLanguageChange?: (language: AtlasLanguage) => void
   onProgressOpen?: () => void
   onMenuOpen?: () => void
+  soundEnabled?: boolean
+  onSoundToggle?: () => void
   progressLabel?: string
   menuLabel?: string
 }
@@ -36,6 +40,8 @@ export function TopBar({
   onLanguageChange,
   onProgressOpen,
   onMenuOpen,
+  soundEnabled = true,
+  onSoundToggle,
   progressLabel = "Progress",
   menuLabel = "Menu",
 }: TopBarProps) {
@@ -44,6 +50,9 @@ export function TopBar({
   const isChinese = selectedLanguage === "中"
   const localizedProgressLabel = isChinese ? progressLabel.replace(/^Progress/i, "进度") : progressLabel.replace(/^进度/i, "Progress")
   const localizedMenuLabel = isChinese ? '菜单' : menuLabel.replace(/^菜单/, 'Menu')
+  const soundActionLabel = isChinese
+    ? (soundEnabled ? '关闭声音' : '开启声音')
+    : (soundEnabled ? 'Mute sound' : 'Turn sound on')
 
   function handleLanguageChange(nextLanguage: AtlasLanguage) {
     setLocalLanguage(nextLanguage)
@@ -105,6 +114,18 @@ export function TopBar({
               中
             </button>
           </div>
+
+          <button
+            className="topbar-action topbar-action--sound"
+            type="button"
+            aria-label={soundActionLabel}
+            aria-pressed={soundEnabled}
+            title={soundActionLabel}
+            onClick={onSoundToggle}
+          >
+            {soundEnabled ? <Volume2 size={15} strokeWidth={1.7} aria-hidden="true" /> : <VolumeX size={15} strokeWidth={1.7} aria-hidden="true" />}
+            <span>{isChinese ? (soundEnabled ? '声音' : '静音') : (soundEnabled ? 'Sound' : 'Muted')}</span>
+          </button>
 
           <button
             className="topbar-action topbar-action--progress"

@@ -10,6 +10,7 @@ import type { Landmark } from "./data/landmarks"
 import { LANDMARKS } from "./data/landmarks"
 import { PROGRESS_HISTORY } from "./data/progress"
 import { copy } from "./lib/i18n"
+import { useAtlasAudio } from "./lib/useAtlasAudio"
 import { useAtlasStore } from "./store/atlasStore"
 
 const MapScene = lazy(() => import("./components/MapScene"))
@@ -69,6 +70,7 @@ export default function App() {
     language,
     progressOpen,
     helpVisible,
+    soundEnabled,
     resetViewSignal,
     setSelected,
     setHovered,
@@ -76,8 +78,11 @@ export default function App() {
     setLanguage,
     setProgressOpen,
     setHelpVisible,
+    toggleSound,
     resetView,
   } = useAtlasStore()
+
+  const { playSfx, startBgm } = useAtlasAudio(soundEnabled)
 
   const selectedLandmark = useMemo(
     () => LANDMARKS.find((landmark) => landmark.id === selectedId) ?? null,
@@ -117,25 +122,54 @@ export default function App() {
   }, [selectedId])
 
   const handleSelect = (id: string) => {
+    playSfx('open')
     setSelected(id)
   }
 
   const handleDiscover = (id: string) => {
     if (!discover(id)) return
+    playSfx('discover')
     setToast(language === "en" ? "Site added to your field notes" : "地标已加入探索笔记")
     window.setTimeout(() => setToast(null), 2400)
   }
 
   const handleLanguageChange = (nextLanguage: AtlasLanguage) => {
+    playSfx('select')
     setLanguage(nextLanguage === "EN" ? "en" : "zh")
   }
 
   const handleNavigate = (item: AtlasNavItem) => {
+    playSfx('select')
     if (item === "archive") {
       setProgressOpen(true)
       return
     }
     setHelpVisible(true)
+  }
+
+  const handleProgressOpen = () => {
+    playSfx('open')
+    setProgressOpen(true)
+  }
+
+  const handleMenuOpen = () => {
+    playSfx('open')
+    setHelpVisible(true)
+  }
+
+  const handleCloseInspector = () => {
+    playSfx('close')
+    setSelected(null)
+  }
+
+  const handleSoundToggle = () => {
+    if (!soundEnabled) startBgm(true)
+    toggleSound()
+  }
+
+  const handleResetView = () => {
+    playSfx('select')
+    resetView()
   }
 
   return (
@@ -150,7 +184,7 @@ export default function App() {
             resetViewSignal={resetViewSignal}
             onSelect={handleSelect}
             onHover={setHovered}
-            onResetView={resetView}
+            onResetView={handleResetView}
             language={language}
           />
         </Suspense>
@@ -160,9 +194,11 @@ export default function App() {
         <TopBar
           language={language === "en" ? "EN" : "中"}
           onLanguageChange={handleLanguageChange}
-          onProgressOpen={() => setProgressOpen(true)}
-          onMenuOpen={() => setHelpVisible(true)}
+          onProgressOpen={handleProgressOpen}
+          onMenuOpen={handleMenuOpen}
           onNavigate={handleNavigate}
+          soundEnabled={soundEnabled}
+          onSoundToggle={handleSoundToggle}
           progressLabel={copy(language, "navProgress") + " · " + discoveredIds.length + "/" + LANDMARKS.length}
           menuLabel={copy(language, "menu")}
         />
@@ -203,7 +239,7 @@ export default function App() {
             }}
             isOpen
             language={language}
-            onClose={() => setSelected(null)}
+            onClose={handleCloseInspector}
             onDiscover={(landmark) => handleDiscover(landmark.id)}
           />
         )}
