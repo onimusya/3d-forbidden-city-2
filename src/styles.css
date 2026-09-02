@@ -261,3 +261,41 @@ button { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .landmark-star-cue { animation: none; }
 }
+
+
+/* Court characters stay readable without scaling their bodies beyond the palace proportion. */
+.visitor-role-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid rgba(226, 174, 83, .46);
+  background: rgba(13, 17, 16, .86);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .24);
+  color: #f2cc70;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  transform: translateY(-3px);
+}
+
+.visitor-role-label__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
+}
+
+.visitor-role-label--queen { color: #b8d7b3; border-color: rgba(184, 215, 179, .48); }
+.visitor-role-label--concubine { color: #efaa9e; border-color: rgba(239, 170, 158, .48); }
+.visitor-role-label--eunuch { color: #dcb363; border-color: rgba(220, 179, 99, .48); }
+
+@media (prefers-reduced-motion: reduce) {
+  .visitor-role-label { transform: translateY(-3px); }
+}

@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef } from "react"
 import { useFrame } from "@react-three/fiber"
-import { useGLTF } from "@react-three/drei"
+import { Html, useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { SCENE_LANDMARKS, type SceneLandmark } from './landmarkData'
 import {
@@ -421,6 +421,14 @@ function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHov
 
 
 type VisitorAction = 'tour' | 'run' | 'play' | 'observe'
+type VisitorRole = 'emperor' | 'queen' | 'concubine' | 'eunuch'
+
+const VISITOR_ROLE_LABELS: Record<VisitorRole, string> = {
+  emperor: 'EMPEROR',
+  queen: 'QUEEN',
+  concubine: 'CONCUBINE',
+  eunuch: 'EUNUCH',
+}
 
 type VisitorPalette = {
   coat: string
@@ -432,6 +440,7 @@ type VisitorPalette = {
 
 type VisitorConfig = {
   id: string
+  role?: VisitorRole
   action: VisitorAction
   palette: keyof typeof VISITOR_PALETTES
   route: readonly (readonly [number, number])[]
@@ -470,6 +479,34 @@ const VISITOR_PALETTES: Record<string, VisitorPalette> = {
     skin: '#d6a17c',
     hair: '#25231e',
     accent: '#e46743',
+  },
+  imperial: {
+    coat: '#8f302e',
+    garment: '#e5b75e',
+    skin: '#d6a07a',
+    hair: '#211b18',
+    accent: '#f2cc70',
+  },
+  royal: {
+    coat: '#35685d',
+    garment: '#e8c68c',
+    skin: '#d8a17f',
+    hair: '#241b1c',
+    accent: '#e4b35f',
+  },
+  lotus: {
+    coat: '#73425a',
+    garment: '#efc1a5',
+    skin: '#dca581',
+    hair: '#2a1b22',
+    accent: '#efaa73',
+  },
+  court: {
+    coat: '#42544f',
+    garment: '#c9914d',
+    skin: '#cb9470',
+    hair: '#24211d',
+    accent: '#dcb363',
   },
 }
 
@@ -562,6 +599,50 @@ const VISITORS: readonly VisitorConfig[] = [
     groundY: 0.57,
     scale: 1.12,
   },
+  {
+    id: 'imperial-emperor',
+    role: 'emperor',
+    action: 'tour',
+    palette: 'imperial',
+    route: [[-5.8, 15.3], [-5.8, 11.1], [-5.8, 9.1], [-5.8, 15.3]],
+    speed: 0.62,
+    phase: 1.6,
+    groundY: 0.61,
+    scale: 1.28,
+  },
+  {
+    id: 'imperial-queen',
+    role: 'queen',
+    action: 'tour',
+    palette: 'royal',
+    route: [[-8.1, -12.5], [-8.1, -17.2], [-14.4, -17.2], [-14.4, -14.9]],
+    speed: 0.54,
+    phase: 2.4,
+    groundY: 0.56,
+    scale: 1.24,
+  },
+  {
+    id: 'imperial-concubine',
+    role: 'concubine',
+    action: 'tour',
+    palette: 'lotus',
+    route: [[-6.2, -1.7], [-6.2, -6.9], [-6.2, -8.1], [-6.2, -1.7]],
+    speed: 0.48,
+    phase: 4.6,
+    groundY: 0.58,
+    scale: 1.16,
+  },
+  {
+    id: 'imperial-eunuch',
+    role: 'eunuch',
+    action: 'tour',
+    palette: 'court',
+    route: [[7.1, 3.7], [7.1, 0.8], [10.1, 0.8], [10.1, 3.7]],
+    speed: 0.95,
+    phase: 5.3,
+    groundY: 0.59,
+    scale: 1.12,
+  },
 ]
 
 const NO_RAYCAST: THREE.Object3D['raycast'] = () => undefined
@@ -587,6 +668,8 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
   const motionBadgeRef = useRef<THREE.Mesh>(null)
   const trailRef = useRef<THREE.Mesh>(null)
   const trailMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
+  const rolePropRef = useRef<THREE.Group>(null)
+  const fanRef = useRef<THREE.Group>(null)
   const palette = VISITOR_PALETTES[config.palette]
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -717,6 +800,16 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
       if (leftArmRef.current) leftArmRef.current.rotation.x = 0.18
       if (rightArmRef.current) rightArmRef.current.rotation.x = -0.9
     }
+
+    if (rolePropRef.current) {
+      const propMotion = Math.sin(cycle * (config.role === 'eunuch' ? 1.15 : 0.62) + config.phase)
+      rolePropRef.current.rotation.z = config.role === 'emperor' ? -0.14 + propMotion * 0.05 : propMotion * 0.13
+      rolePropRef.current.position.y = (config.role === 'eunuch' ? 0.56 : 0.52) + Math.sin(cycle * 0.9) * 0.035
+    }
+    if (fanRef.current) {
+      fanRef.current.rotation.z = -0.1 + Math.sin(cycle * 0.72 + config.phase) * 0.18
+      fanRef.current.position.y = 0.66 + Math.sin(cycle * 0.88 + config.phase) * 0.045
+    }
   })
 
   return (
@@ -752,6 +845,45 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
         <meshStandardMaterial color={palette.garment} roughness={0.72} />
       </mesh>
 
+      {config.role === 'emperor' && (
+        <group>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.48, 0]}>
+            <cylinderGeometry args={[0.18, 0.27, 0.44, 8]} />
+            <meshStandardMaterial color={palette.coat} roughness={0.78} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.58, 0.11]}>
+            <boxGeometry args={[0.36, 0.055, 0.08]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.62} metalness={0.12} />
+          </mesh>
+        </group>
+      )}
+
+      {config.role === 'queen' && (
+        <group>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.43, 0]}>
+            <coneGeometry args={[0.31, 0.52, 8]} />
+            <meshStandardMaterial color={palette.coat} roughness={0.8} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.59, 0.08]}>
+            <boxGeometry args={[0.38, 0.055, 0.08]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.62} metalness={0.1} />
+          </mesh>
+        </group>
+      )}
+
+      {config.role === 'concubine' && (
+        <group>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.43, 0]}>
+            <coneGeometry args={[0.25, 0.47, 8]} />
+            <meshStandardMaterial color={palette.coat} roughness={0.8} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.57, 0.08]}>
+            <boxGeometry args={[0.32, 0.05, 0.07]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.64} />
+          </mesh>
+        </group>
+      )}
+
       <mesh ref={headRef} raycast={NO_RAYCAST} castShadow position={[0, 0.79, 0]}>
         <icosahedronGeometry args={[0.115, 1]} />
         <meshStandardMaterial color={palette.skin} roughness={0.88} flatShading />
@@ -760,6 +892,62 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
         <coneGeometry args={[0.13, 0.09, 6]} />
         <meshStandardMaterial color={palette.hair} roughness={0.9} flatShading />
       </mesh>
+
+      {config.role === 'emperor' && (
+        <group position={[0, 1.02, 0]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <cylinderGeometry args={[0.14, 0.17, 0.06, 8]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.15} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.09, 0]}>
+            <boxGeometry args={[0.07, 0.15, 0.07]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.15} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} position={[0, 0.18, 0]}>
+            <sphereGeometry args={[0.045, 8, 6]} />
+            <meshBasicMaterial color={palette.accent} />
+          </mesh>
+        </group>
+      )}
+
+      {config.role === 'queen' && (
+        <group position={[0, 1.0, -0.03]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <torusGeometry args={[0.13, 0.025, 6, 12]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.12} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} position={[0, 0.07, 0.01]}>
+            <sphereGeometry args={[0.045, 8, 6]} />
+            <meshBasicMaterial color={palette.accent} />
+          </mesh>
+        </group>
+      )}
+
+      {config.role === 'concubine' && (
+        <group>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 1.02, -0.07]}>
+            <sphereGeometry args={[0.12, 10, 8]} />
+            <meshStandardMaterial color={palette.hair} roughness={0.88} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} position={[0.1, 1.07, 0.02]}>
+            <coneGeometry args={[0.055, 0.09, 6]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} />
+          </mesh>
+        </group>
+      )}
+
+      {config.role === 'eunuch' && (
+        <group position={[0, 1.0, 0]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <cylinderGeometry args={[0.14, 0.13, 0.12, 8]} />
+            <meshStandardMaterial color={palette.hair} roughness={0.86} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} position={[0, -0.005, 0.13]}>
+            <boxGeometry args={[0.2, 0.025, 0.025]} />
+            <meshBasicMaterial color={palette.accent} />
+          </mesh>
+        </group>
+      )}
 
       <group ref={leftArmRef} position={[-0.17, 0.61, 0]}>
         <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
@@ -773,6 +961,45 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
           <meshStandardMaterial color={palette.coat} roughness={0.82} />
         </mesh>
       </group>
+
+      {config.role === 'emperor' && (
+        <group ref={rolePropRef} position={[0.24, 0.52, 0.13]} rotation={[0, 0, -0.14]}>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.022, 0.022, 0.78, 8]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.52} metalness={0.18} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.61, 0]}>
+            <sphereGeometry args={[0.06, 8, 6]} />
+            <meshBasicMaterial color={palette.accent} />
+          </mesh>
+        </group>
+      )}
+
+      {config.role === 'eunuch' && (
+        <group ref={rolePropRef} position={[0.24, 0.56, 0.16]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <boxGeometry args={[0.34, 0.1, 0.22]} />
+            <meshStandardMaterial color={palette.garment} roughness={0.76} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.1, 0.02]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.055, 0.055, 0.25, 10]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.12} />
+          </mesh>
+        </group>
+      )}
+
+      {(config.role === 'queen' || config.role === 'concubine') && (
+        <group ref={fanRef} position={[0.27, 0.66, 0.14]} rotation={[0, 0, -0.1]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <circleGeometry args={[config.role === 'queen' ? 0.19 : 0.16, 12, -Math.PI * 0.45, Math.PI * 0.9]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.6} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.17, 0]}>
+            <cylinderGeometry args={[0.018, 0.018, 0.34, 8]} />
+            <meshStandardMaterial color={palette.garment} roughness={0.72} />
+          </mesh>
+        </group>
+      )}
 
       <group ref={leftLegRef} position={[-0.07, 0.29, 0]}>
         <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
@@ -819,6 +1046,15 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
             <meshStandardMaterial color="#25313a" emissive="#36525a" emissiveIntensity={0.35} roughness={0.42} />
           </mesh>
         </group>
+      )}
+
+      {config.role && (
+        <Html position={[0, 1.48, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: 'none' }}>
+          <div className={'visitor-role-label visitor-role-label--' + config.role}>
+            <span className="visitor-role-label__dot" />
+            {VISITOR_ROLE_LABELS[config.role]}
+          </div>
+        </Html>
       )}
     </group>
   )
