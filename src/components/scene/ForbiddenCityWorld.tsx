@@ -703,8 +703,8 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
       if (!(object instanceof THREE.Mesh) || object.name === 'visitor-shadow') return
       const materials = Array.isArray(object.material) ? object.material : [object.material]
       materials.forEach((material) => {
-        material.depthTest = false
-        material.depthWrite = false
+        material.depthTest = true
+        material.depthWrite = !material.transparent
       })
     })
   }, [])
@@ -1049,7 +1049,7 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
       )}
 
       {config.role && (
-        <Html position={[0, 1.48, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: 'none' }}>
+        <Html occlude position={[0, 1.48, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: 'none' }}>
           <div className={'visitor-role-label visitor-role-label--' + config.role}>
             <span className="visitor-role-label__dot" />
             {VISITOR_ROLE_LABELS[config.role]}
