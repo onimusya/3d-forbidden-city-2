@@ -5,6 +5,8 @@ import {
   ChevronDown,
   Languages,
   Menu,
+  Moon,
+  Sun,
   Volume2,
   VolumeX,
 } from "lucide-react"
@@ -23,6 +25,8 @@ export interface TopBarProps {
   onMenuOpen?: () => void
   soundEnabled?: boolean
   onSoundToggle?: () => void
+  timeOfDay?: "day" | "night"
+  onTimeOfDayToggle?: () => void
   progressLabel?: string
   menuLabel?: string
 }
@@ -42,6 +46,8 @@ export function TopBar({
   onMenuOpen,
   soundEnabled = true,
   onSoundToggle,
+  timeOfDay = "day",
+  onTimeOfDayToggle,
   progressLabel = "Progress",
   menuLabel = "Menu",
 }: TopBarProps) {
@@ -53,6 +59,9 @@ export function TopBar({
   const soundActionLabel = isChinese
     ? (soundEnabled ? '关闭声音' : '开启声音')
     : (soundEnabled ? 'Mute sound' : 'Turn sound on')
+  const timeActionLabel = isChinese
+    ? (timeOfDay === "day" ? '切换到夜景' : '切换到日景')
+    : (timeOfDay === "day" ? 'Switch to night' : 'Switch to day')
 
   function handleLanguageChange(nextLanguage: AtlasLanguage) {
     setLocalLanguage(nextLanguage)
@@ -125,6 +134,18 @@ export function TopBar({
           >
             {soundEnabled ? <Volume2 size={15} strokeWidth={1.7} aria-hidden="true" /> : <VolumeX size={15} strokeWidth={1.7} aria-hidden="true" />}
             <span>{isChinese ? (soundEnabled ? '声音' : '静音') : (soundEnabled ? 'Sound' : 'Muted')}</span>
+          </button>
+
+          <button
+            className="topbar-action topbar-action--time"
+            type="button"
+            aria-label={timeActionLabel}
+            aria-pressed={timeOfDay === "night"}
+            title={timeActionLabel}
+            onClick={onTimeOfDayToggle}
+          >
+            {timeOfDay === "day" ? <Sun size={15} strokeWidth={1.7} aria-hidden="true" /> : <Moon size={15} strokeWidth={1.7} aria-hidden="true" />}
+            <span>{isChinese ? (timeOfDay === "day" ? '日景' : '夜景') : (timeOfDay === "day" ? 'Day' : 'Night')}</span>
           </button>
 
           <button

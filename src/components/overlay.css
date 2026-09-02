@@ -582,6 +582,12 @@
   color: var(--atlas-muted);
 }
 
+.topbar-action--time[aria-pressed="true"] {
+  border-color: rgba(134, 181, 163, 0.5);
+  background: rgba(65, 105, 134, 0.14);
+  color: #b8d8f2;
+}
+
 .topbar-menu {
   gap: 7px;
   padding: 0 0 0 10px;
@@ -1924,12 +1930,18 @@
 
   .topbar-action--progress span,
   .topbar-action--sound span,
+  .topbar-action--time span,
   .topbar-menu > span,
   .topbar-menu__chevron {
     display: none;
   }
 
   .topbar-action--sound {
+    width: 31px;
+    padding: 0;
+  }
+
+  .topbar-action--time {
     width: 31px;
     padding: 0;
   }

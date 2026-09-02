@@ -1,6 +1,6 @@
 import { Html, OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { LANDMARKS } from '../data/landmarks'
@@ -15,6 +15,7 @@ export type MapSceneProps = {
   onResetView?: () => void
   resetViewSignal?: number
   language?: 'en' | 'zh'
+  timeOfDay?: 'day' | 'night'
   onReady?: () => void
 }
 
@@ -26,6 +27,127 @@ function getResponsiveZoom(width: number, height: number) {
   const widthZoom = width / BASE_MAP_WIDTH
   const heightZoom = height / BASE_MAP_HEIGHT
   return Math.min(14.5, Math.max(5.2, Math.min(widthZoom, heightZoom)))
+}
+
+const DAY_PHASE = 0.8
+const NIGHT_PHASE = DAY_PHASE + Math.PI
+const SCENE_RAYCAST_DISABLED: THREE.Object3D["raycast"] = () => undefined
+
+function DayNightRig({ timeOfDay }: { timeOfDay: "day" | "night" }) {
+  const { scene } = useThree()
+  const phaseRef = useRef(timeOfDay === "night" ? NIGHT_PHASE : DAY_PHASE)
+  const targetPhaseRef = useRef(phaseRef.current)
+  const ambientRef = useRef<THREE.AmbientLight>(null)
+  const hemisphereRef = useRef<THREE.HemisphereLight>(null)
+  const sunRef = useRef<THREE.DirectionalLight>(null)
+  const moonRef = useRef<THREE.DirectionalLight>(null)
+  const warmPointRef = useRef<THREE.PointLight>(null)
+  const coolPointRef = useRef<THREE.PointLight>(null)
+  const sunOrbRef = useRef<THREE.Mesh>(null)
+  const moonOrbRef = useRef<THREE.Mesh>(null)
+  const sunMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
+  const moonMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
+  const dayBackground = useMemo(() => new THREE.Color("#0d1110"), [])
+  const nightBackground = useMemo(() => new THREE.Color("#08111f"), [])
+  const dayFog = useMemo(() => new THREE.Color("#0d1110"), [])
+  const nightFog = useMemo(() => new THREE.Color("#08111f"), [])
+  const dayAmbientColor = useMemo(() => new THREE.Color("#d8d8c6"), [])
+  const nightAmbientColor = useMemo(() => new THREE.Color("#617898"), [])
+  const daySkyColor = useMemo(() => new THREE.Color("#f0c77b"), [])
+  const nightSkyColor = useMemo(() => new THREE.Color("#294d78"), [])
+  const dayGroundColor = useMemo(() => new THREE.Color("#123b35"), [])
+  const nightGroundColor = useMemo(() => new THREE.Color("#071c2a"), [])
+  const daySunColor = useMemo(() => new THREE.Color("#ffdda4"), [])
+  const nightSunColor = useMemo(() => new THREE.Color("#496b91"), [])
+  const sunOrbColor = useMemo(() => new THREE.Color("#ffd27c"), [])
+  const moonOrbColor = useMemo(() => new THREE.Color("#b8d8f2"), [])
+
+  useEffect(() => {
+    targetPhaseRef.current = timeOfDay === "night" ? NIGHT_PHASE : DAY_PHASE
+  }, [timeOfDay])
+
+  useFrame((_, delta) => {
+    phaseRef.current = THREE.MathUtils.damp(phaseRef.current, targetPhaseRef.current, 1.35, delta)
+    const phase = phaseRef.current
+    const sunElevation = Math.sin(phase)
+    const dayLevel = THREE.MathUtils.smoothstep(sunElevation, -0.22, 0.32)
+    const sunX = Math.cos(phase) * 34
+    const sunZ = Math.sin(phase) * 28
+    const sunY = sunElevation * 38 + 16
+
+    if (sunRef.current) {
+      sunRef.current.position.set(sunX, sunY, sunZ)
+      sunRef.current.intensity = THREE.MathUtils.lerp(0.06, 3.15, dayLevel)
+      sunRef.current.color.lerpColors(nightSunColor, daySunColor, dayLevel)
+    }
+    if (moonRef.current) {
+      moonRef.current.position.set(-sunX, 16 - sunElevation * 38, -sunZ)
+      moonRef.current.intensity = THREE.MathUtils.lerp(0.9, 0.06, dayLevel)
+    }
+    if (ambientRef.current) {
+      ambientRef.current.intensity = THREE.MathUtils.lerp(0.44, 1.35, dayLevel)
+      ambientRef.current.color.lerpColors(nightAmbientColor, dayAmbientColor, dayLevel)
+    }
+    if (hemisphereRef.current) {
+      hemisphereRef.current.intensity = THREE.MathUtils.lerp(0.78, 1.2, dayLevel)
+      hemisphereRef.current.color.lerpColors(nightSkyColor, daySkyColor, dayLevel)
+      hemisphereRef.current.groundColor.lerpColors(nightGroundColor, dayGroundColor, dayLevel)
+    }
+    if (warmPointRef.current) warmPointRef.current.intensity = THREE.MathUtils.lerp(23, 12, dayLevel)
+    if (coolPointRef.current) coolPointRef.current.intensity = THREE.MathUtils.lerp(14, 7, dayLevel)
+
+    const background = scene.background
+    if (background instanceof THREE.Color) background.lerpColors(nightBackground, dayBackground, dayLevel)
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.lerpColors(nightFog, dayFog, dayLevel)
+
+    if (sunOrbRef.current && sunMaterialRef.current) {
+      sunOrbRef.current.position.set(sunX, sunY, sunZ)
+      sunOrbRef.current.scale.setScalar(0.86 + dayLevel * 0.14)
+      sunMaterialRef.current.opacity = dayLevel * 0.9
+      sunMaterialRef.current.color.copy(sunOrbColor)
+      sunOrbRef.current.visible = dayLevel > 0.015
+    }
+    if (moonOrbRef.current && moonMaterialRef.current) {
+      moonOrbRef.current.position.set(-sunX, 16 - sunElevation * 38, -sunZ)
+      moonOrbRef.current.scale.setScalar(0.76 + (1 - dayLevel) * 0.14)
+      moonMaterialRef.current.opacity = (1 - dayLevel) * 0.82
+      moonMaterialRef.current.color.copy(moonOrbColor)
+      moonOrbRef.current.visible = dayLevel < 0.985
+    }
+  })
+
+  return (
+    <>
+      <ambientLight ref={ambientRef} color="#d8d8c6" intensity={1.35} />
+      <hemisphereLight ref={hemisphereRef} args={["#f0c77b", "#123b35", 1.2]} />
+      <directionalLight
+        ref={sunRef}
+        castShadow
+        color="#ffdda4"
+        intensity={3.15}
+        position={[24, 43, 20]}
+        shadow-bias={-0.00018}
+        shadow-mapSize={[1536, 1536]}
+        shadow-camera-near={1}
+        shadow-camera-far={120}
+        shadow-camera-left={-42}
+        shadow-camera-right={42}
+        shadow-camera-top={42}
+        shadow-camera-bottom={-42}
+      />
+      <directionalLight ref={moonRef} color="#8eb7dd" intensity={0.06} position={[-24, -11, -20]} />
+      <pointLight ref={warmPointRef} color="#cb8050" intensity={18} distance={62} decay={2} position={[0, 9, 12]} />
+      <pointLight ref={coolPointRef} color="#4e9e91" intensity={12} distance={54} decay={2} position={[0, 7, -17]} />
+      <mesh ref={sunOrbRef} raycast={SCENE_RAYCAST_DISABLED} renderOrder={3} position={[24, 43, 20]}>
+        <sphereGeometry args={[0.78, 16, 10]} />
+        <meshBasicMaterial ref={sunMaterialRef} color="#ffd27c" transparent opacity={0.9} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh ref={moonOrbRef} raycast={SCENE_RAYCAST_DISABLED} renderOrder={3} position={[-24, -11, -20]}>
+        <sphereGeometry args={[0.68, 16, 10]} />
+        <meshBasicMaterial ref={moonMaterialRef} color="#b8d8f2" transparent opacity={0} depthWrite={false} toneMapped={false} />
+      </mesh>
+    </>
+  )
 }
 
 function ResponsiveCamera() {
@@ -245,7 +367,7 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
   )
 }
 
-export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en', onReady }: MapSceneProps) {
+export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en', timeOfDay = 'day', onReady }: MapSceneProps) {
   return (
     <Canvas
       orthographic
@@ -258,25 +380,7 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHov
     >
       <color attach="background" args={['#0d1110']} />
       <fog attach="fog" args={['#0d1110', 48, 132]} />
-      <ambientLight color="#d8d8c6" intensity={1.35} />
-      <hemisphereLight args={['#f0c77b', '#123b35', 1.2]} />
-      <directionalLight
-        castShadow
-        color="#ffdda4"
-        intensity={3.15}
-        position={[25, 42, 21]}
-        shadow-bias={-0.00018}
-        shadow-mapSize={[1536, 1536]}
-        shadow-camera-near={1}
-        shadow-camera-far={120}
-        shadow-camera-left={-42}
-        shadow-camera-right={42}
-        shadow-camera-top={42}
-        shadow-camera-bottom={-42}
-      />
-      <directionalLight color="#79b6a7" intensity={1.2} position={[-30, 18, -24]} />
-      <pointLight color="#cb8050" intensity={18} distance={62} decay={2} position={[0, 9, 12]} />
-      <pointLight color="#4e9e91" intensity={12} distance={54} decay={2} position={[0, 7, -17]} />
+      <DayNightRig timeOfDay={timeOfDay} />
       <ResponsiveCamera />
       <SceneControls selectedId={selectedId} onResetView={onResetView} resetViewSignal={resetViewSignal} language={language} />
       <ForbiddenCityWorld

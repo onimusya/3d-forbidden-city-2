@@ -74,6 +74,7 @@ export default function App() {
     progressOpen,
     helpVisible,
     soundEnabled,
+    timeOfDay,
     resetViewSignal,
     setSelected,
     setHovered,
@@ -82,6 +83,7 @@ export default function App() {
     setProgressOpen,
     setHelpVisible,
     toggleSound,
+    toggleTimeOfDay,
     resetView,
   } = useAtlasStore()
 
@@ -177,6 +179,11 @@ export default function App() {
     toggleSound()
   }
 
+  const handleTimeOfDayToggle = () => {
+    playSfx("select")
+    toggleTimeOfDay()
+  }
+
   const handleResetView = () => {
     playSfx('select')
     resetView()
@@ -197,6 +204,7 @@ export default function App() {
             onHover={setHovered}
             onResetView={handleResetView}
             language={language}
+            timeOfDay={timeOfDay}
             onReady={handleSceneReady}
           />
         </Suspense>
@@ -211,6 +219,8 @@ export default function App() {
           onNavigate={handleNavigate}
           soundEnabled={soundEnabled}
           onSoundToggle={handleSoundToggle}
+          timeOfDay={timeOfDay}
+          onTimeOfDayToggle={handleTimeOfDayToggle}
           progressLabel={copy(language, "navProgress") + " · " + discoveredIds.length + "/" + LANDMARKS.length}
           menuLabel={copy(language, "menu")}
         />
