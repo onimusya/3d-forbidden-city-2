@@ -75,6 +75,7 @@ export default function App() {
     helpVisible,
     soundEnabled,
     timeOfDay,
+    season,
     resetViewSignal,
     setSelected,
     setHovered,
@@ -84,6 +85,7 @@ export default function App() {
     setHelpVisible,
     toggleSound,
     toggleTimeOfDay,
+    cycleSeason,
     resetView,
   } = useAtlasStore()
 
@@ -184,13 +186,18 @@ export default function App() {
     toggleTimeOfDay()
   }
 
+  const handleSeasonCycle = () => {
+    playSfx("select")
+    cycleSeason()
+  }
+
   const handleResetView = () => {
     playSfx('select')
     resetView()
   }
 
   return (
-    <main ref={shellRef} className="app-shell" aria-busy={!sceneReady && !sceneTimedOut}>
+    <main ref={shellRef} className="app-shell" data-season={season} aria-busy={!sceneReady && !sceneTimedOut}>
       <div className="atlas-noise" aria-hidden="true" />
       <AtlasPreloader language={language} ready={sceneReady || sceneTimedOut} usingFallback={sceneTimedOut && !sceneReady} />
       <div className="canvas-layer" aria-label={language === "en" ? "Interactive isometric map of the Forbidden City" : "故宫互动等距地图"}>
@@ -205,6 +212,7 @@ export default function App() {
             onResetView={handleResetView}
             language={language}
             timeOfDay={timeOfDay}
+            season={season}
             onReady={handleSceneReady}
           />
         </Suspense>
@@ -221,6 +229,8 @@ export default function App() {
           onSoundToggle={handleSoundToggle}
           timeOfDay={timeOfDay}
           onTimeOfDayToggle={handleTimeOfDayToggle}
+          season={season}
+          onSeasonCycle={handleSeasonCycle}
           progressLabel={copy(language, "navProgress") + " · " + discoveredIds.length + "/" + LANDMARKS.length}
           menuLabel={copy(language, "menu")}
         />

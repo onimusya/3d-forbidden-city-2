@@ -16,6 +16,28 @@
   --atlas-serif: 'Playfair Display', Georgia, serif;
   --atlas-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --atlas-mono: 'DM Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+}
+
+.app-shell[data-season="spring"] {
+  --atlas-gold: #e5a477;
+  --atlas-gold-light: #ffd0a6;
+  --atlas-vermilion: #d87968;
+  --atlas-teal: #91c6a0;
+}
+
+.app-shell[data-season="autumn"] {
+  --atlas-gold: #e6a05b;
+  --atlas-gold-light: #ffd08c;
+  --atlas-vermilion: #d47a48;
+  --atlas-teal: #a7a36d;
+}
+
+.app-shell[data-season="winter"] {
+  --atlas-gold: #d4c087;
+  --atlas-gold-light: #e7f4ef;
+  --atlas-vermilion: #b97969;
+  --atlas-teal: #8bb3b6;
 }
 
 .atlas-topbar,
@@ -1931,6 +1953,7 @@
   .topbar-action--progress span,
   .topbar-action--sound span,
   .topbar-action--time span,
+  .topbar-action--season span,
   .topbar-menu > span,
   .topbar-menu__chevron {
     display: none;
@@ -1942,6 +1965,11 @@
   }
 
   .topbar-action--time {
+    width: 31px;
+    padding: 0;
+  }
+
+  .topbar-action--season {
     width: 31px;
     padding: 0;
   }
@@ -2259,5 +2287,16 @@
   .interaction-hint {
     right: 10px;
     bottom: 158px;
+  }
+}
+
+
+@media (max-width: 420px) {
+  .brand-copy {
+    display: none;
+  }
+
+  .atlas-brand {
+    gap: 0;
   }
 }

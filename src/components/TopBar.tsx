@@ -5,7 +5,10 @@ import {
   ChevronDown,
   Languages,
   Menu,
+  Flower2,
+  Leaf,
   Moon,
+  Snowflake,
   Sun,
   Volume2,
   VolumeX,
@@ -15,6 +18,7 @@ import "./overlay.css"
 
 export type AtlasNavItem = "atlas" | "method" | "archive"
 export type AtlasLanguage = "EN" | "中"
+type AtlasSeason = "spring" | "summer" | "autumn" | "winter"
 
 export interface TopBarProps {
   activeItem?: AtlasNavItem
@@ -27,6 +31,8 @@ export interface TopBarProps {
   onSoundToggle?: () => void
   timeOfDay?: "day" | "night"
   onTimeOfDayToggle?: () => void
+  season?: AtlasSeason
+  onSeasonCycle?: () => void
   progressLabel?: string
   menuLabel?: string
 }
@@ -48,6 +54,8 @@ export function TopBar({
   onSoundToggle,
   timeOfDay = "day",
   onTimeOfDayToggle,
+  season = "summer",
+  onSeasonCycle,
   progressLabel = "Progress",
   menuLabel = "Menu",
 }: TopBarProps) {
@@ -62,6 +70,14 @@ export function TopBar({
   const timeActionLabel = isChinese
     ? (timeOfDay === "day" ? '切换到夜景' : '切换到日景')
     : (timeOfDay === "day" ? 'Switch to night' : 'Switch to day')
+  const seasonLabel = {
+    spring: isChinese ? "春" : "Spring",
+    summer: isChinese ? "夏" : "Summer",
+    autumn: isChinese ? "秋" : "Autumn",
+    winter: isChinese ? "冬" : "Winter",
+  }[season]
+  const seasonActionLabel = isChinese ? `切换季节（当前${seasonLabel}）` : `Rotate season (current ${seasonLabel})`
+  const SeasonIcon = season === "spring" ? Flower2 : season === "summer" ? Sun : season === "autumn" ? Leaf : Snowflake
 
   function handleLanguageChange(nextLanguage: AtlasLanguage) {
     setLocalLanguage(nextLanguage)
@@ -146,6 +162,17 @@ export function TopBar({
           >
             {timeOfDay === "day" ? <Sun size={15} strokeWidth={1.7} aria-hidden="true" /> : <Moon size={15} strokeWidth={1.7} aria-hidden="true" />}
             <span>{isChinese ? (timeOfDay === "day" ? '日景' : '夜景') : (timeOfDay === "day" ? 'Day' : 'Night')}</span>
+          </button>
+
+          <button
+            className="topbar-action topbar-action--season"
+            type="button"
+            aria-label={seasonActionLabel}
+            title={seasonActionLabel}
+            onClick={onSeasonCycle}
+          >
+            <SeasonIcon size={15} strokeWidth={1.7} aria-hidden="true" />
+            <span>{seasonLabel}</span>
           </button>
 
           <button

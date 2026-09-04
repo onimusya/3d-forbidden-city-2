@@ -449,14 +449,24 @@ const TREE_POINTS: readonly TreePoint[] = [
   { x: 15.9, z: 13.4, scale: 0.72 },
 ]
 
-export function TreeGroves() {
+type GroveSeason = "spring" | "summer" | "autumn" | "winter"
+
+const GROVE_PALETTES: Record<GroveSeason, { trunk: string; canopy: string; highlight: string }> = {
+  spring: { trunk: "#6a4734", canopy: "#3e8155", highlight: "#a5c77e" },
+  summer: { trunk: "#553923", canopy: "#244c3d", highlight: "#3d7454" },
+  autumn: { trunk: "#70402d", canopy: "#75492f", highlight: "#c77e3d" },
+  winter: { trunk: "#5b5147", canopy: "#557477", highlight: "#b4d4d0" },
+}
+
+export function TreeGroves({ season = "summer" }: { season?: GroveSeason } = {}) {
   const trees = useMemo(() => TREE_POINTS, [])
+  const palette = GROVE_PALETTES[season]
 
   return (
     <group>
       <Instances limit={trees.length} range={trees.length} castShadow>
         <cylinderGeometry args={[0.13, 0.2, 1.18, 6]} />
-        <meshStandardMaterial color="#553923" roughness={0.95} />
+        <meshStandardMaterial color={palette.trunk} roughness={0.95} />
         {trees.map((tree, index) => (
           <Instance
             key={`trunk-${index}`}
@@ -467,7 +477,7 @@ export function TreeGroves() {
       </Instances>
       <Instances limit={trees.length} range={trees.length} castShadow>
         <icosahedronGeometry args={[0.67, 0]} />
-        <meshStandardMaterial color="#244c3d" roughness={0.96} />
+        <meshStandardMaterial color={palette.canopy} roughness={0.96} />
         {trees.map((tree, index) => (
           <Instance
             key={`canopy-${index}`}
@@ -478,7 +488,7 @@ export function TreeGroves() {
       </Instances>
       <Instances limit={trees.length} range={trees.length} castShadow>
         <icosahedronGeometry args={[0.39, 0]} />
-        <meshStandardMaterial color="#3d7454" roughness={0.92} />
+        <meshStandardMaterial color={palette.highlight} roughness={0.92} />
         {trees.map((tree, index) => (
           <Instance
             key={`canopy-highlight-${index}`}
@@ -725,6 +735,16 @@ export function LandmarkBeacon({
   )
 }
 
-export function Atmosphere() {
-  return <Sparkles count={58} scale={[70, 16, 54]} size={1.45} speed={0.17} noise={1.1} color="#d8b56b" opacity={0.34} />
+type AtmosphereSeason = "spring" | "summer" | "autumn" | "winter"
+
+const ATMOSPHERE_PALETTES: Record<AtmosphereSeason, { count: number; size: number; speed: number; noise: number; color: string; opacity: number }> = {
+  spring: { count: 78, size: 1.55, speed: 0.28, noise: 1.2, color: "#f1aaa3", opacity: 0.42 },
+  summer: { count: 58, size: 1.45, speed: 0.17, noise: 1.1, color: "#d8b56b", opacity: 0.34 },
+  autumn: { count: 72, size: 1.62, speed: 0.24, noise: 1.25, color: "#e8944d", opacity: 0.42 },
+  winter: { count: 104, size: 1.36, speed: 0.42, noise: 1.45, color: "#d9edf4", opacity: 0.46 },
+}
+
+export function Atmosphere({ season = "summer" }: { season?: AtmosphereSeason } = {}) {
+  const visual = ATMOSPHERE_PALETTES[season]
+  return <Sparkles count={visual.count} scale={[70, 16, 54]} size={visual.size} speed={visual.speed} noise={visual.noise} color={visual.color} opacity={visual.opacity} />
 }

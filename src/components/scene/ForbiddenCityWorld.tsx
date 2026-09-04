@@ -20,12 +20,15 @@ import {
 import type { BuildingInteractionProps, Vec3 } from './primitives'
 import { registerAtlasLoadingManager } from '../../lib/atlasLoading'
 
+type SceneSeason = "spring" | "summer" | "autumn" | "winter"
+
 export type ForbiddenCityWorldProps = {
   selectedId: string | null
   hoveredId: string | null
   discoveredIds: readonly string[]
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
+  season?: SceneSeason
   onReady?: () => void
 }
 
@@ -401,7 +404,7 @@ function LandmarkLayer({
   )
 }
 
-function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover }: ForbiddenCityWorldProps) {
+function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, season }: ForbiddenCityWorldProps) {
   return (
     <group>
       <ImperialBase />
@@ -413,7 +416,7 @@ function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHov
       <NineDragonScreen />
       <LanternRows />
       <DecorativeAxis />
-      <TreeGroves />
+      <TreeGroves season={season} />
 
     </group>
   )
@@ -1070,10 +1073,10 @@ function VisitorsLayer() {
   )
 }
 
-export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onReady }: ForbiddenCityWorldProps) {
+export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, season = "summer", onReady }: ForbiddenCityWorldProps) {
   return (
     <group>
-      <Suspense fallback={<ProceduralWorld selectedId={selectedId} hoveredId={hoveredId} discoveredIds={discoveredIds} onSelect={onSelect} onHover={onHover} />}>
+      <Suspense fallback={<ProceduralWorld selectedId={selectedId} hoveredId={hoveredId} discoveredIds={discoveredIds} onSelect={onSelect} onHover={onHover} season={season} />}>
         <ForbiddenCityModel onReady={onReady} />
       </Suspense>
       <VisitorsLayer />
@@ -1085,7 +1088,7 @@ export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSel
         onSelect={onSelect}
         onHover={onHover}
       />
-      <Atmosphere />
+      <Atmosphere season={season} />
     </group>
   )
 }

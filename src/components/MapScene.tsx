@@ -16,6 +16,7 @@ export type MapSceneProps = {
   resetViewSignal?: number
   language?: 'en' | 'zh'
   timeOfDay?: 'day' | 'night'
+  season?: SceneSeason
   onReady?: () => void
 }
 
@@ -29,11 +30,97 @@ function getResponsiveZoom(width: number, height: number) {
   return Math.min(14.5, Math.max(5.2, Math.min(widthZoom, heightZoom)))
 }
 
+type SceneSeason = "spring" | "summer" | "autumn" | "winter"
+
+type SeasonTheme = {
+  dayBackground: string
+  nightBackground: string
+  dayFog: string
+  nightFog: string
+  dayAmbient: string
+  nightAmbient: string
+  daySky: string
+  nightSky: string
+  dayGround: string
+  nightGround: string
+  daySun: string
+  nightSun: string
+  sunOrb: string
+  moonOrb: string
+}
+
+const SEASON_THEMES: Record<SceneSeason, SeasonTheme> = {
+  spring: {
+    dayBackground: "#10221d",
+    nightBackground: "#09151d",
+    dayFog: "#10221d",
+    nightFog: "#09151d",
+    dayAmbient: "#e0d5c6",
+    nightAmbient: "#607d91",
+    daySky: "#f4c88a",
+    nightSky: "#3a687c",
+    dayGround: "#165044",
+    nightGround: "#092532",
+    daySun: "#ffd39e",
+    nightSun: "#668da7",
+    sunOrb: "#ffd59b",
+    moonOrb: "#bcdcf0",
+  },
+  summer: {
+    dayBackground: "#0d1110",
+    nightBackground: "#08111f",
+    dayFog: "#0d1110",
+    nightFog: "#08111f",
+    dayAmbient: "#d8d8c6",
+    nightAmbient: "#617898",
+    daySky: "#f0c77b",
+    nightSky: "#294d78",
+    dayGround: "#123b35",
+    nightGround: "#071c2a",
+    daySun: "#ffdda4",
+    nightSun: "#496b91",
+    sunOrb: "#ffd27c",
+    moonOrb: "#b8d8f2",
+  },
+  autumn: {
+    dayBackground: "#1d1915",
+    nightBackground: "#120f17",
+    dayFog: "#1d1915",
+    nightFog: "#120f17",
+    dayAmbient: "#e2c7a5",
+    nightAmbient: "#75657a",
+    daySky: "#e7aa69",
+    nightSky: "#514668",
+    dayGround: "#3b4937",
+    nightGround: "#201d27",
+    daySun: "#ffc078",
+    nightSun: "#83678b",
+    sunOrb: "#ffbd6e",
+    moonOrb: "#d0c5e0",
+  },
+  winter: {
+    dayBackground: "#15202a",
+    nightBackground: "#060e1b",
+    dayFog: "#15202a",
+    nightFog: "#060e1b",
+    dayAmbient: "#c8d7de",
+    nightAmbient: "#6d86a4",
+    daySky: "#c7dce7",
+    nightSky: "#526e98",
+    dayGround: "#607f80",
+    nightGround: "#122338",
+    daySun: "#e6d8bb",
+    nightSun: "#6b88b0",
+    sunOrb: "#e9d8b7",
+    moonOrb: "#d9ebf5",
+  },
+}
+
 const DAY_PHASE = 0.8
 const NIGHT_PHASE = DAY_PHASE + Math.PI
 const SCENE_RAYCAST_DISABLED: THREE.Object3D["raycast"] = () => undefined
 
-function DayNightRig({ timeOfDay }: { timeOfDay: "day" | "night" }) {
+function DayNightRig({ timeOfDay, season }: { timeOfDay: "day" | "night"; season: SceneSeason }) {
   const { scene } = useThree()
   const phaseRef = useRef(timeOfDay === "night" ? NIGHT_PHASE : DAY_PHASE)
   const targetPhaseRef = useRef(phaseRef.current)
@@ -47,20 +134,21 @@ function DayNightRig({ timeOfDay }: { timeOfDay: "day" | "night" }) {
   const moonOrbRef = useRef<THREE.Mesh>(null)
   const sunMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
   const moonMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
-  const dayBackground = useMemo(() => new THREE.Color("#0d1110"), [])
-  const nightBackground = useMemo(() => new THREE.Color("#08111f"), [])
-  const dayFog = useMemo(() => new THREE.Color("#0d1110"), [])
-  const nightFog = useMemo(() => new THREE.Color("#08111f"), [])
-  const dayAmbientColor = useMemo(() => new THREE.Color("#d8d8c6"), [])
-  const nightAmbientColor = useMemo(() => new THREE.Color("#617898"), [])
-  const daySkyColor = useMemo(() => new THREE.Color("#f0c77b"), [])
-  const nightSkyColor = useMemo(() => new THREE.Color("#294d78"), [])
-  const dayGroundColor = useMemo(() => new THREE.Color("#123b35"), [])
-  const nightGroundColor = useMemo(() => new THREE.Color("#071c2a"), [])
-  const daySunColor = useMemo(() => new THREE.Color("#ffdda4"), [])
-  const nightSunColor = useMemo(() => new THREE.Color("#496b91"), [])
-  const sunOrbColor = useMemo(() => new THREE.Color("#ffd27c"), [])
-  const moonOrbColor = useMemo(() => new THREE.Color("#b8d8f2"), [])
+  const theme = SEASON_THEMES[season]
+  const dayBackground = useMemo(() => new THREE.Color(theme.dayBackground), [theme.dayBackground])
+  const nightBackground = useMemo(() => new THREE.Color(theme.nightBackground), [theme.nightBackground])
+  const dayFog = useMemo(() => new THREE.Color(theme.dayFog), [theme.dayFog])
+  const nightFog = useMemo(() => new THREE.Color(theme.nightFog), [theme.nightFog])
+  const dayAmbientColor = useMemo(() => new THREE.Color(theme.dayAmbient), [theme.dayAmbient])
+  const nightAmbientColor = useMemo(() => new THREE.Color(theme.nightAmbient), [theme.nightAmbient])
+  const daySkyColor = useMemo(() => new THREE.Color(theme.daySky), [theme.daySky])
+  const nightSkyColor = useMemo(() => new THREE.Color(theme.nightSky), [theme.nightSky])
+  const dayGroundColor = useMemo(() => new THREE.Color(theme.dayGround), [theme.dayGround])
+  const nightGroundColor = useMemo(() => new THREE.Color(theme.nightGround), [theme.nightGround])
+  const daySunColor = useMemo(() => new THREE.Color(theme.daySun), [theme.daySun])
+  const nightSunColor = useMemo(() => new THREE.Color(theme.nightSun), [theme.nightSun])
+  const sunOrbColor = useMemo(() => new THREE.Color(theme.sunOrb), [theme.sunOrb])
+  const moonOrbColor = useMemo(() => new THREE.Color(theme.moonOrb), [theme.moonOrb])
 
   useEffect(() => {
     targetPhaseRef.current = timeOfDay === "night" ? NIGHT_PHASE : DAY_PHASE
@@ -118,12 +206,12 @@ function DayNightRig({ timeOfDay }: { timeOfDay: "day" | "night" }) {
 
   return (
     <>
-      <ambientLight ref={ambientRef} color="#d8d8c6" intensity={1.35} />
-      <hemisphereLight ref={hemisphereRef} args={["#f0c77b", "#123b35", 1.2]} />
+      <ambientLight ref={ambientRef} color={theme.dayAmbient} intensity={1.35} />
+      <hemisphereLight ref={hemisphereRef} args={[theme.daySky, theme.dayGround, 1.2]} />
       <directionalLight
         ref={sunRef}
         castShadow
-        color="#ffdda4"
+        color={theme.daySun}
         intensity={3.15}
         position={[24, 43, 20]}
         shadow-bias={-0.00018}
@@ -140,11 +228,11 @@ function DayNightRig({ timeOfDay }: { timeOfDay: "day" | "night" }) {
       <pointLight ref={coolPointRef} color="#4e9e91" intensity={12} distance={54} decay={2} position={[0, 7, -17]} />
       <mesh ref={sunOrbRef} raycast={SCENE_RAYCAST_DISABLED} renderOrder={3} position={[24, 43, 20]}>
         <sphereGeometry args={[0.78, 16, 10]} />
-        <meshBasicMaterial ref={sunMaterialRef} color="#ffd27c" transparent opacity={0.9} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={sunMaterialRef} color={theme.sunOrb} transparent opacity={0.9} depthWrite={false} toneMapped={false} />
       </mesh>
       <mesh ref={moonOrbRef} raycast={SCENE_RAYCAST_DISABLED} renderOrder={3} position={[-24, -11, -20]}>
         <sphereGeometry args={[0.68, 16, 10]} />
-        <meshBasicMaterial ref={moonMaterialRef} color="#b8d8f2" transparent opacity={0} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={moonMaterialRef} color={theme.moonOrb} transparent opacity={0} depthWrite={false} toneMapped={false} />
       </mesh>
     </>
   )
@@ -367,7 +455,7 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
   )
 }
 
-export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en', timeOfDay = 'day', onReady }: MapSceneProps) {
+export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en', timeOfDay = 'day', season = 'summer', onReady }: MapSceneProps) {
   return (
     <Canvas
       orthographic
@@ -380,7 +468,7 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHov
     >
       <color attach="background" args={['#0d1110']} />
       <fog attach="fog" args={['#0d1110', 48, 132]} />
-      <DayNightRig timeOfDay={timeOfDay} />
+      <DayNightRig timeOfDay={timeOfDay} season={season} />
       <ResponsiveCamera />
       <SceneControls selectedId={selectedId} onResetView={onResetView} resetViewSignal={resetViewSignal} language={language} />
       <ForbiddenCityWorld
@@ -390,6 +478,7 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHov
         onSelect={onSelect}
         onHover={onHover}
         onReady={onReady}
+        season={season}
       />
     </Canvas>
   )
