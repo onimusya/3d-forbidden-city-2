@@ -295,6 +295,7 @@ button { font: inherit; }
 .visitor-role-label--queen { color: #b8d7b3; border-color: rgba(184, 215, 179, .48); }
 .visitor-role-label--concubine { color: #efaa9e; border-color: rgba(239, 170, 158, .48); }
 .visitor-role-label--eunuch { color: #dcb363; border-color: rgba(220, 179, 99, .48); }
+.visitor-role-label--fireworks { color: #f4c96f; border-color: rgba(244, 201, 111, .62); box-shadow: 0 0 16px rgba(240, 125, 97, .22); }
 
 @media (prefers-reduced-motion: reduce) {
   .visitor-role-label { transform: translateY(-3px); }

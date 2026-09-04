@@ -478,6 +478,7 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHov
         onSelect={onSelect}
         onHover={onHover}
         onReady={onReady}
+        timeOfDay={timeOfDay}
         season={season}
       />
     </Canvas>

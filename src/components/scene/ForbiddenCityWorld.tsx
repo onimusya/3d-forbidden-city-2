@@ -30,6 +30,7 @@ export type ForbiddenCityWorldProps = {
   discoveredIds: readonly string[]
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
+  timeOfDay?: "day" | "night"
   season?: SceneSeason
   onReady?: () => void
 }
@@ -1165,24 +1166,405 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
   )
 }
 
-function VisitorsLayer() {
+type FireworkBurst = {
+  delay: number
+  height: number
+  x: number
+  z: number
+  radius: number
+  color: string
+  accent: string
+}
+
+const FIREWORK_BURSTS: readonly FireworkBurst[] = [
+  { delay: 0.5, height: 5.9, x: -1.7, z: 0.2, radius: 3.4, color: "#f4c96f", accent: "#f07d61" },
+  { delay: 2.95, height: 5.2, x: 1.8, z: 0.65, radius: 3.0, color: "#ef8c73", accent: "#f6d88a" },
+  { delay: 5.35, height: 6.4, x: 0.1, z: -1.8, radius: 3.7, color: "#9ed8d2", accent: "#eeb56a" },
+]
+const FIREWORK_LOOP = 8.7
+const FIREWORK_ROCKET_TIME = 1.12
+const FIREWORK_BURST_TIME = 2.85
+const FIREWORK_SPARK_COUNT = 28
+const FIREWORK_RAY_COUNT = 18
+const FIREWORK_ROCKET_TRAIL_COUNT = 5
+
+function writeFireworkPoint(
+  positions: Float32Array,
+  colors: Float32Array,
+  index: number,
+  x: number,
+  y: number,
+  z: number,
+  color: THREE.Color,
+  brightness: number,
+) {
+  const offset = index * 3
+  positions[offset] = x
+  positions[offset + 1] = y
+  positions[offset + 2] = z
+  colors[offset] = color.r * brightness
+  colors[offset + 1] = color.g * brightness
+  colors[offset + 2] = color.b * brightness
+}
+
+function hideFireworkPoint(positions: Float32Array, colors: Float32Array, index: number) {
+  const offset = index * 3
+  positions[offset] = 0
+  positions[offset + 1] = -20
+  positions[offset + 2] = 0
+  colors[offset] = 0
+  colors[offset + 1] = 0
+  colors[offset + 2] = 0
+}
+
+function FireworkShow() {
+  const elapsedRef = useRef(0)
+  const reducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  )
+  const burstColors = useMemo(() => FIREWORK_BURSTS.map((burst) => new THREE.Color(burst.color)), [])
+  const burstAccents = useMemo(() => FIREWORK_BURSTS.map((burst) => new THREE.Color(burst.accent)), [])
+  const sparkGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(FIREWORK_BURSTS.length * FIREWORK_SPARK_COUNT * 3), 3))
+    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(FIREWORK_BURSTS.length * FIREWORK_SPARK_COUNT * 3), 3))
+    return geometry
+  }, [])
+  const rayGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(FIREWORK_BURSTS.length * FIREWORK_RAY_COUNT * 2 * 3), 3))
+    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(FIREWORK_BURSTS.length * FIREWORK_RAY_COUNT * 2 * 3), 3))
+    return geometry
+  }, [])
+  const rocketGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(FIREWORK_BURSTS.length * FIREWORK_ROCKET_TRAIL_COUNT * 3), 3))
+    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(FIREWORK_BURSTS.length * FIREWORK_ROCKET_TRAIL_COUNT * 3), 3))
+    return geometry
+  }, [])
+  const glowTexture = useMemo(() => {
+    if (typeof document === "undefined") return null
+    const canvas = document.createElement("canvas")
+    canvas.width = 32
+    canvas.height = 32
+    const context = canvas.getContext("2d")
+    if (!context) return null
+    const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16)
+    gradient.addColorStop(0, "rgba(255, 255, 255, 1)")
+    gradient.addColorStop(0.2, "rgba(255, 244, 208, 0.96)")
+    gradient.addColorStop(0.55, "rgba(255, 190, 100, 0.36)")
+    gradient.addColorStop(1, "rgba(255, 150, 70, 0)")
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 32, 32)
+    return new THREE.CanvasTexture(canvas)
+  }, [])
+  const sparkMaterial = useMemo(() => new THREE.PointsMaterial({
+    size: 8.5,
+    map: glowTexture ?? undefined,
+    sizeAttenuation: false,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.92,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  }), [glowTexture])
+  const rayMaterial = useMemo(() => new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.95,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  }), [])
+  const rocketMaterial = useMemo(() => new THREE.PointsMaterial({
+    size: 5.5,
+    map: glowTexture ?? undefined,
+    sizeAttenuation: false,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.96,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  }), [glowTexture])
+
+  useEffect(() => {
+    return () => {
+      sparkGeometry.dispose()
+      rayGeometry.dispose()
+      rocketGeometry.dispose()
+      sparkMaterial.dispose()
+      rayMaterial.dispose()
+      rocketMaterial.dispose()
+      glowTexture?.dispose()
+    }
+  }, [glowTexture, rayGeometry, rayMaterial, rocketGeometry, rocketMaterial, sparkGeometry, sparkMaterial])
+
+  useFrame((_, delta) => {
+    elapsedRef.current += delta * (reducedMotion ? 0.24 : 1)
+    const loopTime = elapsedRef.current % FIREWORK_LOOP
+    const sparkPositions = sparkGeometry.getAttribute("position").array as Float32Array
+    const sparkColors = sparkGeometry.getAttribute("color").array as Float32Array
+    const rayPositions = rayGeometry.getAttribute("position").array as Float32Array
+    const rayColors = rayGeometry.getAttribute("color").array as Float32Array
+    const rocketPositions = rocketGeometry.getAttribute("position").array as Float32Array
+    const rocketColors = rocketGeometry.getAttribute("color").array as Float32Array
+    const now = elapsedRef.current
+    let sparkIndex = 0
+    let rayIndex = 0
+    let rocketIndex = 0
+
+    FIREWORK_BURSTS.forEach((burst, burstIndex) => {
+      const primary = burstColors[burstIndex]
+      const secondary = burstAccents[burstIndex]
+      const localTime = loopTime - burst.delay
+      const isActive = localTime >= 0 && localTime <= FIREWORK_ROCKET_TIME + FIREWORK_BURST_TIME
+
+      for (let trail = 0; trail < FIREWORK_ROCKET_TRAIL_COUNT; trail += 1) {
+        if (!isActive || localTime >= FIREWORK_ROCKET_TIME) {
+          hideFireworkPoint(rocketPositions, rocketColors, rocketIndex)
+        } else {
+          const trailTime = Math.max(0, localTime - trail * 0.08)
+          const launchProgress = THREE.MathUtils.clamp(trailTime / FIREWORK_ROCKET_TIME, 0, 1)
+          const launchY = 0.95 + (burst.height - 0.95) * (1 - Math.pow(1 - launchProgress, 1.8))
+          writeFireworkPoint(
+            rocketPositions,
+            rocketColors,
+            rocketIndex,
+            burst.x,
+            launchY - trail * 0.34,
+            burst.z,
+            primary,
+            Math.max(0.18, 1 - trail * 0.17),
+          )
+        }
+        rocketIndex += 1
+      }
+
+      for (let spark = 0; spark < FIREWORK_SPARK_COUNT; spark += 1) {
+        if (!isActive || localTime < FIREWORK_ROCKET_TIME) {
+          hideFireworkPoint(sparkPositions, sparkColors, sparkIndex)
+        } else {
+          const burstProgress = THREE.MathUtils.clamp((localTime - FIREWORK_ROCKET_TIME) / FIREWORK_BURST_TIME, 0, 1)
+          const theta = (spark / FIREWORK_SPARK_COUNT) * Math.PI * 2 + burstIndex * 0.44
+          const elevation = Math.sin(spark * 1.73 + burstIndex * 1.1) * 0.58
+          const horizontal = Math.cos(elevation)
+          const directionX = Math.cos(theta) * horizontal
+          const directionY = Math.sin(elevation)
+          const directionZ = Math.sin(theta) * horizontal
+          const radial = burst.radius * (0.12 + burstProgress * 0.96) * (1 + Math.sin(now * 8 + spark) * 0.025)
+          const gravity = burst.radius * 0.78 * burstProgress * burstProgress
+          const fade = 0.22 + (1 - burstProgress) * 0.78
+          writeFireworkPoint(
+            sparkPositions,
+            sparkColors,
+            sparkIndex,
+            burst.x + directionX * radial,
+            burst.height + directionY * radial - gravity,
+            burst.z + directionZ * radial,
+            spark % 3 === 0 ? primary : secondary,
+            fade,
+          )
+        }
+        sparkIndex += 1
+      }
+
+      for (let ray = 0; ray < FIREWORK_RAY_COUNT; ray += 1) {
+        const first = rayIndex * 3
+        const second = (rayIndex + 1) * 3
+        if (!isActive || localTime < FIREWORK_ROCKET_TIME) {
+          rayPositions[first] = 0
+          rayPositions[first + 1] = -20
+          rayPositions[first + 2] = 0
+          rayPositions[second] = 0
+          rayPositions[second + 1] = -20
+          rayPositions[second + 2] = 0
+          rayColors[first] = 0
+          rayColors[first + 1] = 0
+          rayColors[first + 2] = 0
+          rayColors[second] = 0
+          rayColors[second + 1] = 0
+          rayColors[second + 2] = 0
+        } else {
+          const burstProgress = THREE.MathUtils.clamp((localTime - FIREWORK_ROCKET_TIME) / FIREWORK_BURST_TIME, 0, 1)
+          const theta = (ray / FIREWORK_RAY_COUNT) * Math.PI * 2 + burstIndex * 0.44
+          const elevation = Math.sin(ray * 1.73 + burstIndex * 1.1) * 0.58
+          const horizontal = Math.cos(elevation)
+          const directionX = Math.cos(theta) * horizontal
+          const directionY = Math.sin(elevation)
+          const directionZ = Math.sin(theta) * horizontal
+          const radial = burst.radius * (0.12 + burstProgress * 0.96)
+          const gravity = burst.radius * 0.78 * burstProgress * burstProgress
+          const centerX = burst.x
+          const centerY = burst.height - gravity
+          const centerZ = burst.z
+          const inner = radial * 0.26
+          const outer = radial * 1.08
+          rayPositions[first] = centerX + directionX * inner
+          rayPositions[first + 1] = centerY + directionY * inner
+          rayPositions[first + 2] = centerZ + directionZ * inner
+          rayPositions[second] = centerX + directionX * outer
+          rayPositions[second + 1] = centerY + directionY * outer
+          rayPositions[second + 2] = centerZ + directionZ * outer
+          const fade = 0.12 + (1 - burstProgress) * 0.68
+          const color = ray % 3 === 0 ? primary : secondary
+          rayColors[first] = color.r * fade
+          rayColors[first + 1] = color.g * fade
+          rayColors[first + 2] = color.b * fade
+          rayColors[second] = color.r * fade * 0.72
+          rayColors[second + 1] = color.g * fade * 0.72
+          rayColors[second + 2] = color.b * fade * 0.72
+        }
+        rayIndex += 2
+      }
+    })
+
+    sparkGeometry.getAttribute("position").needsUpdate = true
+    sparkGeometry.getAttribute("color").needsUpdate = true
+    rayGeometry.getAttribute("position").needsUpdate = true
+    rayGeometry.getAttribute("color").needsUpdate = true
+    rocketGeometry.getAttribute("position").needsUpdate = true
+    rocketGeometry.getAttribute("color").needsUpdate = true
+  })
+
+  return (
+    <group name="night-firework-show" renderOrder={14}>
+      <points geometry={sparkGeometry} material={sparkMaterial} frustumCulled={false} />
+      <lineSegments geometry={rayGeometry} material={rayMaterial} frustumCulled={false} />
+      <points geometry={rocketGeometry} material={rocketMaterial} frustumCulled={false} />
+    </group>
+  )
+}
+
+function FireworksPerformer() {
+  const leftArmRef = useRef<THREE.Group>(null)
+  const rightArmRef = useRef<THREE.Group>(null)
+  const launcherRef = useRef<THREE.Group>(null)
+  const fuseRef = useRef<THREE.Mesh>(null)
+  const ringRef = useRef<THREE.Mesh>(null)
+  const elapsedRef = useRef(0)
+  const reducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  )
+  const palette = VISITOR_PALETTES.imperial
+
+  useFrame((_, delta) => {
+    elapsedRef.current += delta * (reducedMotion ? 0.24 : 1)
+    const cycle = elapsedRef.current * 4.4
+    const gesture = Math.sin(cycle)
+    if (leftArmRef.current) leftArmRef.current.rotation.z = -0.85 + gesture * 0.08
+    if (rightArmRef.current) rightArmRef.current.rotation.z = 0.38 + gesture * 0.1
+    if (launcherRef.current) launcherRef.current.rotation.z = -0.1 + Math.sin(cycle * 0.52) * 0.035
+    if (fuseRef.current) {
+      const pulse = (Math.sin(cycle * 1.4) + 1) / 2
+      fuseRef.current.scale.setScalar(0.78 + pulse * 0.34)
+    }
+    if (ringRef.current) {
+      ringRef.current.scale.setScalar(0.86 + (Math.sin(cycle * 0.7) + 1) * 0.08)
+      ringRef.current.rotation.z = cycle * 0.32
+    }
+  })
+
+  return (
+    <group name="night-fireworks-performer" position={[0, 0.58, -4.5]}>
+      <FireworkShow />
+      <group name="fireworks-artisan">
+        <mesh name="visitor-shadow" raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.52, 0]} scale={[0.46, 0.3, 1]}>
+          <circleGeometry args={[0.46, 20]} />
+          <meshBasicMaterial color="#050908" transparent opacity={0.34} depthWrite={false} />
+        </mesh>
+        <mesh ref={ringRef} raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.49, 0]}>
+          <ringGeometry args={[0.32, 0.41, 24]} />
+          <meshBasicMaterial color={palette.accent} transparent opacity={0.52} depthWrite={false} />
+        </mesh>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.48, 0]}>
+          <cylinderGeometry args={[0.16, 0.25, 0.46, 8]} />
+          <meshStandardMaterial color={palette.coat} roughness={0.78} />
+        </mesh>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.6, 0.11]}>
+          <boxGeometry args={[0.35, 0.055, 0.08]} />
+          <meshStandardMaterial color={palette.accent} roughness={0.62} metalness={0.14} />
+        </mesh>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.79, 0]}>
+          <icosahedronGeometry args={[0.115, 1]} />
+          <meshStandardMaterial color={palette.skin} roughness={0.88} flatShading />
+        </mesh>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.91, 0]}>
+          <coneGeometry args={[0.13, 0.09, 6]} />
+          <meshStandardMaterial color={palette.hair} roughness={0.9} flatShading />
+        </mesh>
+        <group position={[0, 1.02, 0]}>
+          <mesh raycast={NO_RAYCAST} castShadow>
+            <cylinderGeometry args={[0.14, 0.17, 0.06, 8]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.15} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.09, 0]}>
+            <boxGeometry args={[0.07, 0.15, 0.07]} />
+            <meshStandardMaterial color={palette.accent} roughness={0.58} metalness={0.15} />
+          </mesh>
+        </group>
+        <group ref={leftArmRef} position={[-0.17, 0.61, 0]}>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
+            <boxGeometry args={[0.065, 0.28, 0.065]} />
+            <meshStandardMaterial color={palette.coat} roughness={0.82} />
+          </mesh>
+        </group>
+        <group ref={rightArmRef} position={[0.17, 0.61, 0]}>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
+            <boxGeometry args={[0.065, 0.28, 0.065]} />
+            <meshStandardMaterial color={palette.coat} roughness={0.82} />
+          </mesh>
+        </group>
+        <group ref={launcherRef} position={[0.3, 0.14, 0.1]}>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.08, 0]}>
+            <boxGeometry args={[0.4, 0.16, 0.3]} />
+            <meshStandardMaterial color="#29352e" roughness={0.84} />
+          </mesh>
+          <mesh raycast={NO_RAYCAST} castShadow position={[0, 0.47, 0]} rotation={[0, 0, -0.09]}>
+            <cylinderGeometry args={[0.055, 0.075, 0.76, 8]} />
+            <meshStandardMaterial color="#5f4630" roughness={0.78} />
+          </mesh>
+          <mesh ref={fuseRef} raycast={NO_RAYCAST} position={[0, 0.88, 0]}>
+            <sphereGeometry args={[0.062, 10, 8]} />
+            <meshBasicMaterial color="#ffbd55" toneMapped={false} />
+          </mesh>
+        </group>
+      </group>
+      <Html position={[0, 1.62, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: "none" }}>
+        <div className="visitor-role-label visitor-role-label--fireworks">
+          <span className="visitor-role-label__dot" />
+          FIREWORKS
+        </div>
+      </Html>
+    </group>
+  )
+}
+
+function VisitorsLayer({ timeOfDay }: { timeOfDay: "day" | "night" }) {
   return (
     <group name="visitors-layer">
       {VISITORS.map((visitor) => (
         <VisitorActor key={visitor.id} config={visitor} />
       ))}
+      {timeOfDay === "night" && <FireworksPerformer />}
     </group>
   )
 }
 
-export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, season = "summer", onReady }: ForbiddenCityWorldProps) {
+export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, timeOfDay = "day", season = "summer", onReady }: ForbiddenCityWorldProps) {
   return (
     <SeasonThemeProvider season={season}>
       <group>
       <Suspense fallback={<ProceduralWorld selectedId={selectedId} hoveredId={hoveredId} discoveredIds={discoveredIds} onSelect={onSelect} onHover={onHover} season={season} />}>
         <ForbiddenCityModel onReady={onReady} season={season} />
       </Suspense>
-      <VisitorsLayer />
+      <VisitorsLayer timeOfDay={timeOfDay} />
       <LandmarkLayer
         landmarks={SCENE_LANDMARKS}
         selectedId={selectedId}
