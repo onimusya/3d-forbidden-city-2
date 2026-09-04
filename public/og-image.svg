@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Forbidden City Atlas</title>
+  <desc id="desc">An interactive isometric atlas of Beijing's Forbidden City.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1211"/>
+      <stop offset="0.56" stop-color="#101c19"/>
+      <stop offset="1" stop-color="#182d27"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="62%" cy="48%" r="58%">
+      <stop offset="0" stop-color="#e2ae53" stop-opacity=".2"/>
+      <stop offset=".46" stop-color="#d76847" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#0b1211" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#226552"/>
+      <stop offset="1" stop-color="#0c2d27"/>
+    </linearGradient>
+    <linearGradient id="courtyard" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d0a063"/>
+      <stop offset="1" stop-color="#84613f"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f806b"/>
+      <stop offset="1" stop-color="#15483f"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000" flood-opacity=".52"/>
+    </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse" patternTransform="skewY(-28) scale(1 .72)">
+      <path d="M42 0H0V42" fill="none" stroke="#b9c7ae" stroke-opacity=".075"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <path d="M0 510 1200 214v416H0Z" fill="url(#grid)" opacity=".68"/>
+  <path d="M0 512 1200 216" stroke="#e2ae53" stroke-opacity=".17"/>
+  <circle cx="938" cy="104" r="46" fill="#ffd27c" opacity=".12" filter="url(#soft)"/>
+  <circle cx="938" cy="104" r="7" fill="#ffd27c"/>
+
+  <g transform="translate(820 318) rotate(-30) skewX(30) scale(1 .82)" filter="url(#shadow)">
+    <rect x="-300" y="-180" width="600" height="360" rx="7" fill="#111b18" stroke="#b27b3d" stroke-width="10"/>
+    <rect x="-284" y="-164" width="568" height="328" fill="url(#ground)" stroke="#d0a063" stroke-width="3"/>
+    <rect x="-247" y="-127" width="494" height="254" fill="url(#courtyard)" stroke="#704f36" stroke-width="5"/>
+    <path d="M-8-127v254M-247 0h494" stroke="#e2c182" stroke-opacity=".7" stroke-width="5"/>
+    <path d="M-220-102h440M-220 102h440" stroke="#704f36" stroke-opacity=".45" stroke-width="3"/>
+
+    <g fill="#6b3029" stroke="#e2ae53" stroke-width="2">
+      <path d="M-254-143h50l-9 15h-32Z"/><path d="M204-143h50l-9 15h-32Z"/>
+      <path d="M-254 128h50l-9 15h-32Z"/><path d="M204 128h50l-9 15h-32Z"/>
+    </g>
+
+    <g stroke="#c7954f" stroke-width="3">
+      <g transform="translate(-7 -36)">
+        <rect x="-80" y="-43" width="160" height="86" rx="3" fill="#a94a32"/>
+        <path d="M-92-43 0-76 92-43 0-11Z" fill="#dcae58"/>
+        <path d="M-62-54 0-80l62 26M-40-61 0-78l40 17" fill="none"/>
+      </g>
+      <g transform="translate(-4 -112) scale(.56)">
+        <rect x="-80" y="-43" width="160" height="86" rx="3" fill="#9a402f"/>
+        <path d="M-92-43 0-76 92-43 0-11Z" fill="#c99546"/>
+      </g>
+      <g transform="translate(-5 47) scale(.64)">
+        <rect x="-80" y="-43" width="160" height="86" rx="3" fill="#8f3b2d"/>
+        <path d="M-92-43 0-76 92-43 0-11Z" fill="#be873e"/>
+      </g>
+      <g transform="translate(-7 110) scale(.47)">
+        <rect x="-80" y="-43" width="160" height="86" rx="3" fill="#7d362c"/>
+        <path d="M-92-43 0-76 92-43 0-11Z" fill="#b07d3b"/>
+      </g>
+    </g>
+
+    <g fill="url(#roof)" stroke="#cda052" stroke-width="2">
+      <path d="M-225-105h58l-10-20h-38Z"/><path d="M167-105h58l-10-20h-38Z"/>
+      <path d="M-225 105h58l-10 20h-38Z"/><path d="M167 105h58l-10 20h-38Z"/>
+      <path d="M-218-45h42l-7-15h-28Z"/><path d="M176-45h42l-7-15h-28Z"/>
+      <path d="M-218 45h42l-7 15h-28Z"/><path d="M176 45h42l-7 15h-28Z"/>
+    </g>
+
+    <g fill="#e2ae53">
+      <circle cx="-205" cy="-72" r="4"/><circle cx="-188" cy="-72" r="3"/><circle cx="205" cy="-72" r="4"/><circle cx="188" cy="-72" r="3"/>
+      <circle cx="-205" cy="72" r="4"/><circle cx="-188" cy="72" r="3"/><circle cx="205" cy="72" r="4"/><circle cx="188" cy="72" r="3"/>
+    </g>
+  </g>
+
+  <g fill="#d8d4c7" font-family="Georgia, 'Times New Roman', serif">
+    <text x="76" y="112" font-size="18" letter-spacing="4" fill="#e2ae53" font-family="Arial, sans-serif">A LIVING 3D ATLAS</text>
+    <text x="72" y="191" font-size="62" letter-spacing="-1.5">The city is a</text>
+    <text x="72" y="258" font-size="62" letter-spacing="-1.5" fill="#f2cd7e">sequence of</text>
+    <text x="72" y="325" font-size="62" letter-spacing="-1.5" fill="#f2cd7e">thresholds.</text>
+  </g>
+  <path d="M75 370h190" stroke="#d76847" stroke-width="2"/>
+  <text x="75" y="405" fill="#a0a59d" font-family="Arial, sans-serif" font-size="16" letter-spacing="1.2">FORBIDDEN CITY · BEIJING · 1420—1911</text>
+  <text x="75" y="445" fill="#71847c" font-family="Arial, sans-serif" font-size="15">Move through the imperial axis and uncover the rooms,</text>
+  <text x="75" y="470" fill="#71847c" font-family="Arial, sans-serif" font-size="15">rituals, and quiet geometries of the palace.</text>
+
+  <g transform="translate(75 532)">
+    <rect width="224" height="42" fill="#e2ae53"/>
+    <text x="22" y="27" fill="#18201c" font-family="Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2">ENTER THE ATLAS</text>
+    <path d="M194 14l13 13m0-13v13h-13" fill="none" stroke="#18201c" stroke-width="1.5"/>
+  </g>
+  <text x="1070" y="572" fill="#91c6a0" font-family="Arial, sans-serif" font-size="12" letter-spacing="3" text-anchor="end">DRAG · ROTATE · DISCOVER</text>
+</svg>
