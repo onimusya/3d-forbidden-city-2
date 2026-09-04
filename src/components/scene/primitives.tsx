@@ -1,10 +1,18 @@
 import { Html, Instance, Instances, Sparkles } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react'
+import type { ReactNode } from 'react'
 import * as THREE from 'three'
 import type { SceneLandmark } from './landmarkData'
 
 export type Vec3 = [number, number, number]
+
+type GroveSeason = "spring" | "summer" | "autumn" | "winter"
+const SEASON_THEME_CONTEXT = createContext<GroveSeason>("summer")
+
+export function SeasonThemeProvider({ season = "summer", children }: { season?: GroveSeason; children: ReactNode }) {
+  return <SEASON_THEME_CONTEXT.Provider value={season}>{children}</SEASON_THEME_CONTEXT.Provider>
+}
 
 export type BuildingInteractionProps = {
   onSelect?: () => void
@@ -23,6 +31,7 @@ type RoofProps = {
 }
 
 export function ChineseRoof({ width, depth, y, color, ridgeColor = '#d4a34e', scale = 1 }: RoofProps) {
+  const season = useContext(SEASON_THEME_CONTEXT)
   const roofWidth = width * scale
   const roofDepth = depth * scale
   const roofHeight = Math.max(0.38, Math.min(0.72, Math.max(roofWidth, roofDepth) * 0.075))
@@ -43,6 +52,18 @@ export function ChineseRoof({ width, depth, y, color, ridgeColor = '#d4a34e', sc
         <boxGeometry args={[roofWidth * 0.57, 0.1, 0.18]} />
         <meshStandardMaterial color={ridgeColor} roughness={0.45} metalness={0.34} />
       </mesh>
+      {season === "winter" && (
+        <group name="procedural-winter-snow">
+          <mesh castShadow receiveShadow position={[0, roofHeight * 0.61, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, roofDepth / roofWidth]}>
+            <coneGeometry args={[roofWidth * 0.59, Math.max(0.12, roofHeight * 0.24), 4]} />
+            <meshStandardMaterial color="#e9f3ef" roughness={0.92} metalness={0.02} />
+          </mesh>
+          <mesh castShadow receiveShadow position={[0, roofHeight * 0.76, 0]}>
+            <boxGeometry args={[roofWidth * 0.59, 0.075, 0.23]} />
+            <meshStandardMaterial color="#f7fbf8" roughness={0.88} />
+          </mesh>
+        </group>
+      )}
       {[
         [-cornerX, cornerZ],
         [cornerX, cornerZ],
@@ -449,13 +470,11 @@ const TREE_POINTS: readonly TreePoint[] = [
   { x: 15.9, z: 13.4, scale: 0.72 },
 ]
 
-type GroveSeason = "spring" | "summer" | "autumn" | "winter"
-
 const GROVE_PALETTES: Record<GroveSeason, { trunk: string; canopy: string; highlight: string }> = {
-  spring: { trunk: "#6a4734", canopy: "#3e8155", highlight: "#a5c77e" },
+  spring: { trunk: "#6a4734", canopy: "#4a8a5b", highlight: "#eca6a0" },
   summer: { trunk: "#553923", canopy: "#244c3d", highlight: "#3d7454" },
-  autumn: { trunk: "#70402d", canopy: "#75492f", highlight: "#c77e3d" },
-  winter: { trunk: "#5b5147", canopy: "#557477", highlight: "#b4d4d0" },
+  autumn: { trunk: "#70402d", canopy: "#71392d", highlight: "#c66b35" },
+  winter: { trunk: "#5b5147", canopy: "#5b6f6e", highlight: "#b4d4d0" },
 }
 
 export function TreeGroves({ season = "summer" }: { season?: GroveSeason } = {}) {
@@ -747,4 +766,94 @@ const ATMOSPHERE_PALETTES: Record<AtmosphereSeason, { count: number; size: numbe
 export function Atmosphere({ season = "summer" }: { season?: AtmosphereSeason } = {}) {
   const visual = ATMOSPHERE_PALETTES[season]
   return <Sparkles count={visual.count} scale={[70, 16, 54]} size={visual.size} speed={visual.speed} noise={visual.noise} color={visual.color} opacity={visual.opacity} />
+}
+
+type WeatherMode = "fall" | "float" | "snow"
+
+type WeatherVisual = {
+  count: number
+  size: number
+  opacity: number
+  speed: number
+  drift: number
+  mode: WeatherMode
+  colors: readonly string[]
+}
+
+const WEATHER_VISUALS: Record<GroveSeason, WeatherVisual> = {
+  spring: { count: 58, size: 0.28, opacity: 0.78, speed: 0.72, drift: 1.15, mode: "fall", colors: ["#f2aaa4", "#f8d5c5", "#e9959b"] },
+  summer: { count: 34, size: 0.2, opacity: 0.92, speed: 1.08, drift: 0.9, mode: "float", colors: ["#ffd77d", "#f6b85c", "#fff0ad"] },
+  autumn: { count: 74, size: 0.34, opacity: 0.82, speed: 0.88, drift: 1.3, mode: "fall", colors: ["#e8944d", "#c95f35", "#f4b35d"] },
+  winter: { count: 118, size: 0.38, opacity: 0.95, speed: 1.18, drift: 0.72, mode: "snow", colors: ["#f4fbff", "#d9edf4", "#ffffff"] },
+}
+
+const WEATHER_SEEDS = Array.from({ length: 118 }, (_, index) => {
+  const random = (seed: number) => seed - Math.floor(seed)
+  return {
+    x: random(Math.sin(index * 12.9898) * 43758.5453) * 68 - 34,
+    y: random(Math.sin(index * 78.233 + 11) * 12415.371) * 15 + 1.6,
+    z: random(Math.sin(index * 39.425 + 7) * 29817.13) * 52 - 26,
+    phase: random(Math.sin(index * 4.123 + 3) * 17931.51) * Math.PI * 2,
+  }
+})
+
+function wrapWeather(value: number, minimum: number, maximum: number) {
+  const span = maximum - minimum
+  return ((value - minimum) % span + span) % span + minimum
+}
+
+export function SeasonalWeather({ season = "summer" }: { season?: GroveSeason } = {}) {
+  const visual = WEATHER_VISUALS[season]
+  const pointsRef = useRef<THREE.Points>(null)
+  const elapsedRef = useRef(0)
+  const geometry = useMemo(() => {
+    const nextGeometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(visual.count * 3)
+    const colors = new Float32Array(visual.count * 3)
+
+    for (let index = 0; index < visual.count; index += 1) {
+      const seed = WEATHER_SEEDS[index]
+      positions[index * 3] = seed.x
+      positions[index * 3 + 1] = seed.y
+      positions[index * 3 + 2] = seed.z
+      new THREE.Color(visual.colors[index % visual.colors.length]).toArray(colors, index * 3)
+    }
+
+    nextGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+    nextGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
+    return nextGeometry
+  }, [visual])
+  const material = useMemo(
+    () => new THREE.PointsMaterial({ size: visual.size, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: visual.opacity, depthTest: true, depthWrite: false }),
+    [visual],
+  )
+
+  useEffect(() => () => {
+    geometry.dispose()
+    material.dispose()
+  }, [geometry, material])
+
+  useFrame((_, delta) => {
+    const points = pointsRef.current
+    if (!points) return
+    elapsedRef.current += Math.min(delta, 0.06)
+    const elapsed = elapsedRef.current
+    const position = points.geometry.getAttribute("position") as THREE.BufferAttribute
+
+    for (let index = 0; index < visual.count; index += 1) {
+      const seed = WEATHER_SEEDS[index]
+      const wave = Math.sin(elapsed * (0.7 + (index % 5) * 0.08) + seed.phase)
+      const crossWave = Math.cos(elapsed * 0.58 + seed.phase * 1.3)
+      const isFloating = visual.mode === "float"
+      const y = isFloating
+        ? seed.y + Math.sin(elapsed * visual.speed + seed.phase) * 0.58
+        : wrapWeather(seed.y - elapsed * visual.speed * (visual.mode === "snow" ? 1.45 : 1), 0.9, 17.5)
+      const x = seed.x + wave * visual.drift + (visual.mode === "fall" ? elapsed * (index % 2 === 0 ? 0.08 : -0.06) : 0)
+      const z = seed.z + crossWave * visual.drift * 0.72
+      position.setXYZ(index, x, y, z)
+    }
+    position.needsUpdate = true
+  })
+
+  return <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} renderOrder={1} />
 }

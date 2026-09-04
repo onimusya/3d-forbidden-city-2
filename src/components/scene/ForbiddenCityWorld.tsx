@@ -5,6 +5,8 @@ import * as THREE from "three"
 import { SCENE_LANDMARKS, type SceneLandmark } from './landmarkData'
 import {
   Atmosphere,
+  SeasonalWeather,
+  SeasonThemeProvider,
   ChineseRoof,
   CourtyardLantern,
   GateHouse,
@@ -43,18 +45,118 @@ function landmarkInteraction(id: string, onSelect: ForbiddenCityWorldProps["onSe
 
 const FORBIDDEN_CITY_MODEL_URL = import.meta.env.BASE_URL + 'models/forbidden-city-atlas.glb'
 
-function ForbiddenCityModel({ onReady }: { onReady?: () => void }) {
+type SceneSeasonVisual = {
+  trunk: string
+  canopy: string
+  highlight: string
+}
+
+const MODEL_SEASON_VISUALS: Record<SceneSeason, SceneSeasonVisual> = {
+  spring: { trunk: "#6a4734", canopy: "#4a8a5b", highlight: "#eca6a0" },
+  summer: { trunk: "#553923", canopy: "#244c3d", highlight: "#3d7454" },
+  autumn: { trunk: "#70402d", canopy: "#71392d", highlight: "#c66b35" },
+  winter: { trunk: "#5b5147", canopy: "#5b6f6e", highlight: "#b4d4d0" },
+}
+
+type TreeColorRole = "trunk" | "canopy" | "highlight"
+const TREE_SOURCE_COLORS: Record<string, TreeColorRole> = {
+  "553923": "trunk",
+  "244c3d": "canopy",
+  "3d7454": "highlight",
+}
+
+function cloneWithColor(material: THREE.Material, color: string) {
+  const nextMaterial = material.clone()
+  if (nextMaterial instanceof THREE.MeshStandardMaterial || nextMaterial instanceof THREE.MeshBasicMaterial) nextMaterial.color.set(color)
+  return nextMaterial
+}
+
+function recolorTreeMaterial(material: THREE.Material, visual: SceneSeasonVisual) {
+  if (!(material instanceof THREE.MeshStandardMaterial)) return material
+  const role = TREE_SOURCE_COLORS[material.color.getHexString()]
+  return role ? cloneWithColor(material, visual[role]) : material
+}
+
+function addWinterSnow(roof: THREE.Object3D) {
+  if (roof.getObjectByName("model-winter-snow")) return
+  const roofMeshes = roof.children.filter((child): child is THREE.Mesh => child instanceof THREE.Mesh)
+  const base = roofMeshes.find((child) => {
+    child.geometry.computeBoundingBox()
+    const box = child.geometry.boundingBox
+    return box ? box.max.y - box.min.y < 0.3 : false
+  })
+  const slope = roofMeshes.find((child) => {
+    if (child === base) return false
+    child.geometry.computeBoundingBox()
+    const box = child.geometry.boundingBox
+    return box ? box.max.y - box.min.y > 0.2 : false
+  })
+  if (!base || !slope) return
+
+  const baseBox = base.geometry.boundingBox
+  const slopeBox = slope.geometry.boundingBox
+  if (!baseBox || !slopeBox) return
+  const baseSize = new THREE.Vector3()
+  const slopeSize = new THREE.Vector3()
+  baseBox.getSize(baseSize)
+  slopeBox.getSize(slopeSize)
+  const width = baseSize.x * Math.abs(base.scale.x)
+  const depth = baseSize.z * Math.abs(base.scale.z)
+  const roofHeight = slopeSize.y * Math.abs(slope.scale.y)
+  const snowLayer = new THREE.Group()
+  snowLayer.name = "model-winter-snow"
+  const snowMaterial = new THREE.MeshStandardMaterial({ color: "#e9f3ef", roughness: 0.9, metalness: 0.01 })
+
+  const snowCap = new THREE.Mesh(new THREE.ConeGeometry(width * 0.52, Math.max(0.12, roofHeight * 0.24), 4), snowMaterial)
+  snowCap.name = "model-winter-snow-cap"
+  snowCap.rotation.y = Math.PI / 4
+  snowCap.scale.z = depth / Math.max(width, 0.001)
+  snowCap.position.y = roofHeight * 0.61
+  snowCap.castShadow = true
+  snowCap.receiveShadow = true
+  snowLayer.add(snowCap)
+
+  const snowRidge = new THREE.Mesh(new THREE.BoxGeometry(width * 0.53, 0.075, 0.23), snowMaterial.clone())
+  snowRidge.name = "model-winter-snow-ridge"
+  snowRidge.position.y = roofHeight * 0.76
+  snowRidge.castShadow = true
+  snowRidge.receiveShadow = true
+  snowLayer.add(snowRidge)
+
+  const snowEave = new THREE.Mesh(new THREE.BoxGeometry(width * 1.03, 0.055, depth * 1.03), snowMaterial.clone())
+  snowEave.name = "model-winter-snow-eave"
+  snowEave.position.y = 0.015
+  snowEave.castShadow = true
+  snowEave.receiveShadow = true
+  snowLayer.add(snowEave)
+  roof.add(snowLayer)
+}
+
+function ForbiddenCityModel({ onReady, season }: { onReady?: () => void; season: SceneSeason }) {
   const { scene } = useGLTF(FORBIDDEN_CITY_MODEL_URL)
   const model = useMemo(() => {
+    const visual = MODEL_SEASON_VISUALS[season]
     const clone = scene.clone(true)
     clone.traverse((object: THREE.Object3D) => {
       if (object instanceof THREE.Mesh) {
         object.castShadow = true
         object.receiveShadow = true
+        const originalMaterials = Array.isArray(object.material) ? object.material : [object.material]
+        const nextMaterials = originalMaterials.map((material) => recolorTreeMaterial(material, visual))
+        if (nextMaterials.some((material, index) => material !== originalMaterials[index])) {
+          object.material = Array.isArray(object.material) ? nextMaterials : nextMaterials[0]
+        }
+        const roofParent = object.parent
+        if (season === "winter" && roofParent && roofParent.name.startsWith("roof")) {
+          const roofColor = roofParent.children.indexOf(object) < 2 ? "#a9c2c3" : "#edf7f4"
+          const roofMaterials = originalMaterials.map((material) => cloneWithColor(material, roofColor))
+          object.material = Array.isArray(object.material) ? roofMaterials : roofMaterials[0]
+        }
       }
+      if (season === "winter" && object.name.startsWith("roof")) addWinterSnow(object)
     })
     return clone
-  }, [scene])
+  }, [scene, season])
 
   useEffect(() => {
     onReady?.()
@@ -1075,9 +1177,10 @@ function VisitorsLayer() {
 
 export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, season = "summer", onReady }: ForbiddenCityWorldProps) {
   return (
-    <group>
+    <SeasonThemeProvider season={season}>
+      <group>
       <Suspense fallback={<ProceduralWorld selectedId={selectedId} hoveredId={hoveredId} discoveredIds={discoveredIds} onSelect={onSelect} onHover={onHover} season={season} />}>
-        <ForbiddenCityModel onReady={onReady} />
+        <ForbiddenCityModel onReady={onReady} season={season} />
       </Suspense>
       <VisitorsLayer />
       <LandmarkLayer
@@ -1089,6 +1192,8 @@ export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSel
         onHover={onHover}
       />
       <Atmosphere season={season} />
-    </group>
+      <SeasonalWeather season={season} />
+      </group>
+    </SeasonThemeProvider>
   )
 }
