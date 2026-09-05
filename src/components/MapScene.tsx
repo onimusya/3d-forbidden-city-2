@@ -10,6 +10,8 @@ export type MapSceneProps = {
   selectedId: string | null
   hoveredId: string | null
   discoveredIds: string[]
+  routeStopIds?: readonly string[]
+  activeRouteStopId?: string | null
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
   onResetView?: () => void
@@ -455,7 +457,7 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
   )
 }
 
-export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHover, onResetView, resetViewSignal, language = 'en', timeOfDay = 'day', season = 'summer', onReady }: MapSceneProps) {
+export function MapScene({ selectedId, hoveredId, discoveredIds, routeStopIds, activeRouteStopId, onSelect, onHover, onResetView, resetViewSignal, language = 'en', timeOfDay = 'day', season = 'summer', onReady }: MapSceneProps) {
   return (
     <Canvas
       orthographic
@@ -475,6 +477,8 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, onSelect, onHov
         selectedId={selectedId}
         hoveredId={hoveredId}
         discoveredIds={discoveredIds}
+        routeStopIds={routeStopIds}
+        activeRouteStopId={activeRouteStopId}
         onSelect={onSelect}
         onHover={onHover}
         onReady={onReady}

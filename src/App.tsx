@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { gsap } from "gsap"
+import { ChevronLeft, ChevronRight, Compass, Navigation, X } from "lucide-react"
 import { AtlasHero } from "./components/AtlasHero"
 import { AtlasPreloader } from "./components/AtlasPreloader"
 import { DiscoveryRail, type DiscoveryLandmark } from "./components/DiscoveryRail"
@@ -46,6 +47,8 @@ const PROGRESS_HISTORY_ZH = [
   { label: '建立屋顶层级', summary: '尺度、色彩与高度区分了典礼的权力和居住的静谧。' },
   { label: '让探索清晰', summary: '图鉴开始说明你在哪里、附近有什么，以及它为何重要。' },
   { label: '当前迭代 · 克制自信', summary: '内容层已准备好，为双语故宫图鉴提供可漫游的骨架。' },
+  { label: '让地标成为现场', summary: '点击地标后，镜头进入更近的等距现场，游线与详情保持在同一段体验里。' },
+  { label: "当前迭代 · 导览成形", summary: "三条策划游线把故宫变成一段可跟随的路线，镜头、地图与探索笔记保持同步。" },
 ] as const
 
 function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], language: 'en' | 'zh'): DiscoveryLandmark {
@@ -61,11 +64,161 @@ function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], lang
   }
 }
 
+type ProcessionRoute = {
+  id: string
+  title: string
+  titleZh: string
+  description: string
+  descriptionZh: string
+  stops: readonly string[]
+}
+
+const PROCESSION_ROUTES: readonly ProcessionRoute[] = [
+  {
+    id: "southern-axis",
+    title: "The Southern Axis",
+    titleZh: "南向中轴",
+    description: "Pass from the ceremonial gate through the Three Great Halls, following the city’s public sequence.",
+    descriptionZh: "从礼仪性的午门出发，穿过三大殿，沿着城市的公共序列向北行进。",
+    stops: ["meridian-gate", "gate-of-supreme-harmony", "hall-of-supreme-harmony", "hall-of-central-harmony", "hall-of-preserving-harmony"],
+  },
+  {
+    id: "inner-court",
+    title: "The Inner Court",
+    titleZh: "内廷深处",
+    description: "Leave public ceremony behind and move through the residences, symbols, and garden at the northern end.",
+    descriptionZh: "离开公开的典礼空间，走进北端的居所、象征与园林。",
+    stops: ["gate-of-heavenly-purity", "palace-of-heavenly-purity", "hall-of-union", "palace-of-earthly-tranquility", "imperial-garden"],
+  },
+  {
+    id: "living-flanks",
+    title: "The Living Flanks",
+    titleZh: "东西侧院",
+    description: "Read the court from its working edges: scholarship, administration, and the quiet garden threshold.",
+    descriptionZh: "从宫苑的工作边缘阅读故宫：文脉、政务与通往园林的静谧门槛。",
+    stops: ["hall-of-mental-cultivation", "hall-of-supreme-harmony", "hall-of-literary-brilliance", "imperial-garden"],
+  },
+]
+
+type ProcessionPickerProps = {
+  isOpen: boolean
+  language: "en" | "zh"
+  onClose: () => void
+  onStart: (routeId: string) => void
+}
+
+function ProcessionPicker({ isOpen, language, onClose, onStart }: ProcessionPickerProps) {
+  if (!isOpen) return null
+
+  const isChinese = language === "zh"
+  return (
+    <div className="route-picker-layer">
+      <button className="route-picker-backdrop" type="button" aria-label={isChinese ? "关闭游线选择" : "Close procession picker"} onClick={onClose} />
+      <section className="route-picker glass-panel" role="dialog" aria-modal="true" aria-labelledby="procession-picker-title">
+        <div className="route-picker__header">
+          <div>
+            <span className="micro route-picker__eyebrow">{isChinese ? "考察方法 / 02" : "Field method / 02"}</span>
+            <h2 className="display-serif" id="procession-picker-title">{isChinese ? "选择一条游线。" : "Choose a procession."}</h2>
+            <p>{isChinese ? "让镜头沿着故宫的空间秩序移动，每一站都保留一段可以停驻的故事。" : "Let the camera follow the city’s spatial order. Each stop keeps a story worth pausing for."}</p>
+          </div>
+          <button className="icon-button" type="button" aria-label={isChinese ? "关闭游线选择" : "Close procession picker"} onClick={onClose}>
+            <X size={17} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="route-picker__list">
+          {PROCESSION_ROUTES.map((route, index) => {
+            const stops = route.stops.map((id) => LANDMARKS.find((landmark) => landmark.id === id)).filter((landmark): landmark is Landmark => Boolean(landmark))
+            const title = isChinese ? route.titleZh : route.title
+            return (
+              <button className="route-option" key={route.id} type="button" data-testid={"route-option-" + route.id} aria-label={(isChinese ? "开始游览 " : "Start ") + title} onClick={() => onStart(route.id)}>
+                <span className="route-option__index micro">{String(index + 1).padStart(2, "0")}</span>
+                <span className="route-option__body">
+                  <span className="route-option__meta micro"><Navigation size={12} strokeWidth={1.6} aria-hidden="true" /> {stops.length} {isChinese ? "站" : "stops"}</span>
+                  <strong>{title}</strong>
+                  <span className="route-option__description">{isChinese ? route.descriptionZh : route.description}</span>
+                  <span className="route-option__stops">
+                    {stops.map((stop, stopIndex) => <span key={stop.id}>{String(stopIndex + 1).padStart(2, "0")} · {isChinese ? stop.chineseName : stop.title}</span>)}
+                  </span>
+                </span>
+                <ChevronRight size={17} strokeWidth={1.4} aria-hidden="true" />
+              </button>
+            )
+          })}
+        </div>
+        <div className="route-picker__footer">
+          <Compass size={14} strokeWidth={1.5} aria-hidden="true" />
+          <span>{isChinese ? "可随时退出游线，继续自由漫游。" : "Exit any time and return to free exploration."}</span>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+type ProcessionPanelProps = {
+  route: ProcessionRoute
+  stopIndex: number
+  language: "en" | "zh"
+  onStopSelect: (index: number) => void
+  onPrevious: () => void
+  onNext: () => void
+  onExit: () => void
+}
+
+function ProcessionPanel({ route, stopIndex, language, onStopSelect, onPrevious, onNext, onExit }: ProcessionPanelProps) {
+  const isChinese = language === "zh"
+  const stops = route.stops.map((id) => LANDMARKS.find((landmark) => landmark.id === id)).filter((landmark): landmark is Landmark => Boolean(landmark))
+  const current = stops[Math.min(stopIndex, Math.max(0, stops.length - 1))]
+  if (!current) return null
+
+  return (
+    <aside className="procession-panel glass-panel" aria-labelledby="procession-panel-title">
+      <div className="procession-panel__topline">
+        <span className="micro">{isChinese ? "游线 /" : "Procession /"} {String(stopIndex + 1).padStart(2, "0")}</span>
+        <button className="icon-button" type="button" aria-label={isChinese ? "退出游线" : "Exit procession"} onClick={onExit}>
+          <X size={15} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      </div>
+      <div className="procession-panel__heading">
+        <span className="procession-panel__route-label"><Navigation size={13} strokeWidth={1.6} aria-hidden="true" /> <span className="micro">{isChinese ? "帝国行进" : "Imperial procession"}</span></span>
+        <span className="procession-panel__count micro">{String(stopIndex + 1).padStart(2, "0")} / {String(stops.length).padStart(2, "0")}</span>
+      </div>
+      <h2 className="display-serif" id="procession-panel-title">{isChinese ? route.titleZh : route.title}</h2>
+      <p className="procession-panel__description">{isChinese ? route.descriptionZh : route.description}</p>
+      <div className="procession-panel__stops" role="list" aria-label={isChinese ? "游线站点" : "Procession stops"}>
+        {stops.map((stop, index) => (
+          <button className={"procession-stop" + (index === stopIndex ? " is-active" : "")} key={stop.id} type="button" role="listitem" aria-current={index === stopIndex ? "step" : undefined} aria-label={(isChinese ? "前往 " : "Go to ") + (isChinese ? stop.chineseName : stop.title)} onClick={() => onStopSelect(index)}>
+            <span className="procession-stop__index micro">{String(index + 1).padStart(2, "0")}</span>
+            <span className="procession-stop__name">{isChinese ? stop.chineseName : stop.title}</span>
+          </button>
+        ))}
+      </div>
+      <div className="procession-panel__current" aria-live="polite">
+        <span className="micro">{isChinese ? "当前站点" : "Current stop"}</span>
+        <strong>{isChinese ? current.chineseName : current.title}</strong>
+        <span>{isChinese ? current.title : current.chineseName}</span>
+      </div>
+      <div className="procession-panel__controls">
+        <button className="procession-panel__previous" type="button" disabled={stopIndex === 0} aria-label={isChinese ? "上一站" : "Previous stop"} onClick={onPrevious}>
+          <ChevronLeft size={14} strokeWidth={1.6} aria-hidden="true" />
+          <span>{isChinese ? "上一站" : "Previous"}</span>
+        </button>
+        <button className="procession-panel__next" type="button" aria-label={stopIndex === stops.length - 1 ? (isChinese ? "完成游线" : "Complete procession") : (isChinese ? "下一站" : "Next stop")} onClick={onNext}>
+          <span>{stopIndex === stops.length - 1 ? (isChinese ? "完成游线" : "Complete route") : (isChinese ? "下一站" : "Next stop")}</span>
+          <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" />
+        </button>
+      </div>
+    </aside>
+  )
+}
+
 export default function App() {
   const shellRef = useRef<HTMLElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
   const [sceneTimedOut, setSceneTimedOut] = useState(false)
+  const [routePickerOpen, setRoutePickerOpen] = useState(false)
+  const [activeRouteId, setActiveRouteId] = useState<string | null>(null)
+  const [routeStopIndex, setRouteStopIndex] = useState(0)
   const {
     selectedId,
     hoveredId,
@@ -102,6 +255,10 @@ export default function App() {
     () => LANDMARKS.find((landmark) => landmark.id === selectedId) ?? null,
     [selectedId],
   )
+  const activeRoute = useMemo(
+    () => PROCESSION_ROUTES.find((route) => route.id === activeRouteId) ?? null,
+    [activeRouteId],
+  )
   const uiLandmarks = useMemo(
     () => LANDMARKS.map((landmark) => toUiLandmark(landmark, discoveredIds, language)),
     [discoveredIds, language],
@@ -136,8 +293,57 @@ export default function App() {
   }, [selectedId])
 
   const handleSelect = (id: string) => {
-    playSfx('open')
+    playSfx("open")
+    if (activeRoute) {
+      const nextStopIndex = activeRoute.stops.indexOf(id)
+      if (nextStopIndex >= 0) setRouteStopIndex(nextStopIndex)
+      else {
+        setActiveRouteId(null)
+        setRouteStopIndex(0)
+      }
+    }
     setSelected(id)
+  }
+
+  const handleStartRoute = (routeId: string) => {
+    const route = PROCESSION_ROUTES.find((candidate) => candidate.id === routeId)
+    if (!route || !route.stops.length) return
+    playSfx("open")
+    setRoutePickerOpen(false)
+    setActiveRouteId(route.id)
+    setRouteStopIndex(0)
+    setHelpVisible(false)
+    setSelected(route.stops[0])
+  }
+
+  const handleRouteStop = (nextStopIndex: number) => {
+    if (!activeRoute || nextStopIndex < 0 || nextStopIndex >= activeRoute.stops.length) return
+    playSfx("select")
+    setRouteStopIndex(nextStopIndex)
+    setSelected(activeRoute.stops[nextStopIndex])
+  }
+
+  const handleExitRoute = () => {
+    playSfx("close")
+    setActiveRouteId(null)
+    setRouteStopIndex(0)
+    resetView()
+    setSelected(null)
+  }
+
+  const handleNextRouteStop = () => {
+    if (!activeRoute) return
+    if (routeStopIndex >= activeRoute.stops.length - 1) {
+      playSfx("discover")
+      setToast(language === "en" ? "Procession complete · atlas view restored" : "游线完成 · 已返回图鉴视角")
+      setActiveRouteId(null)
+      setRouteStopIndex(0)
+      resetView()
+      setSelected(null)
+      window.setTimeout(() => setToast(null), 2600)
+      return
+    }
+    handleRouteStop(routeStopIndex + 1)
   }
 
   const handleDiscover = (id: string) => {
@@ -155,24 +361,37 @@ export default function App() {
   const handleNavigate = (item: AtlasNavItem) => {
     playSfx('select')
     if (item === "archive") {
+      setRoutePickerOpen(false)
       setProgressOpen(true)
       return
     }
+    if (item === "method") {
+      setRoutePickerOpen(true)
+      setHelpVisible(false)
+      return
+    }
+    setRoutePickerOpen(false)
     setHelpVisible(true)
   }
 
   const handleProgressOpen = () => {
-    playSfx('open')
+    playSfx("open")
+    setRoutePickerOpen(false)
     setProgressOpen(true)
   }
 
   const handleMenuOpen = () => {
-    playSfx('open')
+    playSfx("open")
+    setRoutePickerOpen(false)
     setHelpVisible(true)
   }
 
   const handleCloseInspector = () => {
-    playSfx('close')
+    if (activeRouteId) {
+      handleExitRoute()
+      return
+    }
+    playSfx("close")
     resetView()
     setSelected(null)
   }
@@ -207,6 +426,8 @@ export default function App() {
             selectedId={selectedId}
             hoveredId={hoveredId}
             discoveredIds={discoveredIds}
+            routeStopIds={activeRoute?.stops}
+            activeRouteStopId={activeRoute?.stops[routeStopIndex] ?? null}
             resetViewSignal={resetViewSignal}
             onSelect={handleSelect}
             onHover={setHovered}
@@ -219,7 +440,7 @@ export default function App() {
         </Suspense>
       </div>
 
-      <div className={"ui-layer" + (selectedLandmark ? " has-selection" : "")}>
+      <div className={"ui-layer" + (selectedLandmark ? " has-selection" : "") + (activeRoute ? " has-route" : "")}>
         <TopBar
           language={language === "en" ? "EN" : "中"}
           onLanguageChange={handleLanguageChange}
@@ -235,6 +456,17 @@ export default function App() {
           progressLabel={copy(language, "navProgress") + " · " + discoveredIds.length + "/" + LANDMARKS.length}
           menuLabel={copy(language, "menu")}
         />
+        {activeRoute && (
+          <ProcessionPanel
+            route={activeRoute}
+            stopIndex={routeStopIndex}
+            language={language}
+            onStopSelect={handleRouteStop}
+            onPrevious={() => handleRouteStop(routeStopIndex - 1)}
+            onNext={handleNextRouteStop}
+            onExit={handleExitRoute}
+          />
+        )}
         <AtlasHero
           kicker={copy(language, "appKicker") + " / 01"}
           title={language === "en" ? "The city is a" : "这座城，是一段"}
@@ -252,7 +484,19 @@ export default function App() {
           label={language === "en" ? "Known sites" : "已知地标"}
           onSelect={(landmark) => handleSelect(landmark.id)}
         />
-        {helpVisible && !selectedLandmark && !progressOpen && <InteractionHint defaultExpanded onToggle={(expanded) => setHelpVisible(expanded)} language={language} label={language === "en" ? "Navigate the field" : "探索图鉴"} />}
+        {helpVisible && !selectedLandmark && !progressOpen && (
+          <InteractionHint
+            defaultExpanded
+            onToggle={(expanded) => setHelpVisible(expanded)}
+            onOpenProcessions={() => {
+              playSfx("open")
+              setRoutePickerOpen(true)
+              setHelpVisible(false)
+            }}
+            language={language}
+            label={language === "en" ? "Navigate the field" : "探索图鉴"}
+          />
+        )}
         {selectedLandmark && (
           <SiteInspector
             landmark={{
@@ -278,13 +522,15 @@ export default function App() {
         )}
       </div>
 
+      <ProcessionPicker isOpen={routePickerOpen} language={language} onClose={() => setRoutePickerOpen(false)} onStart={handleStartRoute} />
+
       <ProgressPage
         isOpen={progressOpen}
         onClose={() => setProgressOpen(false)}
         history={progressHistory}
         currentRound={PROGRESS_HISTORY.at(-1)?.round ?? 1}
         language={language}
-        remainingGaps={language === 'zh' ? ['完善 360 像素以下的触控探索提示。', '继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为地标详情补充更完整的焦点恢复。'] : ['Refine the sub-360px touch discovery cue.', 'Tune low-power WebGL framing and texture memory.', 'Add deeper focus restoration to the landmark inspector.']}
+        remainingGaps={language === 'zh' ? ['让游线进度在下次访问时保留。', '把地标发现变成更丰富的收藏档案。', '继续优化低功耗设备上的 WebGL 构图与纹理内存。'] : ['Persist route progress between visits.', 'Turn discoveries into a richer collectible archive.', 'Tune low-power WebGL framing and texture memory.']}
       />
 
       {toast && (

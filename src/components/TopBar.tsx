@@ -39,7 +39,7 @@ export interface TopBarProps {
 
 const NAV_ITEMS: ReadonlyArray<{ id: AtlasNavItem; en: string; zh: string }> = [
   { id: "atlas", en: "The atlas", zh: "图鉴" },
-  { id: "method", en: "Field method", zh: "考察方法" },
+  { id: "method", en: "Processions", zh: "游线" },
   { id: "archive", en: "Archive", zh: "档案" },
 ]
 

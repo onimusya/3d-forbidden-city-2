@@ -1,11 +1,12 @@
 import { useId, useState } from 'react'
-import { ChevronDown, ChevronUp, MousePointer2, Rotate3D, ZoomIn } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, ChevronUp, MousePointer2, Navigation, Rotate3D, ZoomIn } from 'lucide-react'
 
 import './overlay.css'
 
 export interface InteractionHintProps {
   defaultExpanded?: boolean
   onToggle?: (expanded: boolean) => void
+  onOpenProcessions?: () => void
   label?: string
   language?: 'en' | 'zh'
 }
@@ -13,6 +14,7 @@ export interface InteractionHintProps {
 export function InteractionHint({
   defaultExpanded = true,
   onToggle,
+  onOpenProcessions,
   label = 'Navigate the field',
   language = 'en',
 }: InteractionHintProps) {
@@ -57,6 +59,21 @@ export function InteractionHint({
           <span><strong>{isChinese ? '滚动' : 'Scroll'}</strong><small>{isChinese ? '缩放至门槛' : 'zoom into a threshold'}</small></span>
           <kbd>＋−</kbd>
         </div>
+      {onOpenProcessions ? (
+        <button
+          className="interaction-hint__route-button"
+          type="button"
+          aria-label={isChinese ? "选择游线" : "Choose a procession"}
+          onClick={onOpenProcessions}
+        >
+          <Navigation size={14} strokeWidth={1.5} aria-hidden="true" />
+          <span>
+            <strong>{isChinese ? "选择游线" : "Choose a procession"}</strong>
+            <small>{isChinese ? "沿着策划路线漫游" : "Follow a curated route"}</small>
+          </span>
+          <ArrowUpRight size={14} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      ) : null}
       </div>
     </aside>
   )

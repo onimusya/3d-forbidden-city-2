@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef } from "react"
 import { useFrame } from "@react-three/fiber"
-import { Html, useGLTF } from "@react-three/drei"
+import { Html, Line, useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { SCENE_LANDMARKS, type SceneLandmark } from './landmarkData'
 import {
@@ -28,6 +28,8 @@ export type ForbiddenCityWorldProps = {
   selectedId: string | null
   hoveredId: string | null
   discoveredIds: readonly string[]
+  routeStopIds?: readonly string[]
+  activeRouteStopId?: string | null
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
   timeOfDay?: "day" | "night"
@@ -503,6 +505,52 @@ function LandmarkLayer({
           onHover={onHover}
         />
       ))}
+    </group>
+  )
+}
+
+type ProcessionPathProps = {
+  landmarks: readonly SceneLandmark[]
+  stopIds: readonly string[]
+  activeStopId: string | null
+}
+
+function ProcessionPath({ landmarks, stopIds, activeStopId }: ProcessionPathProps) {
+  const stops = useMemo(
+    () => stopIds.map((id) => landmarks.find((landmark) => landmark.id === id)).filter((landmark): landmark is SceneLandmark => Boolean(landmark)),
+    [landmarks, stopIds],
+  )
+  const points = useMemo(() => stops.map((stop) => [stop.position[0], 0.62, stop.position[2]] as Vec3), [stops])
+  const activeIndex = stops.findIndex((stop) => stop.id === activeStopId)
+
+  if (!stops.length) return null
+
+  return (
+    <group name="procession-route" raycast={NO_RAYCAST}>
+      {points.length > 1 && (
+        <>
+          <Line points={points} color="#e2ae53" lineWidth={5} transparent opacity={0.08} depthTest={false} />
+          <Line points={points} color="#f0c969" lineWidth={1.15} transparent opacity={0.76} />
+        </>
+      )}
+      {stops.map((stop, index) => {
+        const isActive = stop.id === activeStopId
+        const isPassed = activeIndex >= 0 && index < activeIndex
+        const color = isPassed ? "#86b5a3" : "#e2ae53"
+        return (
+          <group key={"procession-stop-" + stop.id} position={[stop.position[0], 0.66, stop.position[2]]}>
+            <mesh raycast={NO_RAYCAST} rotation={[-Math.PI / 2, 0, 0]} renderOrder={12}>
+              <ringGeometry args={[isActive ? 0.55 : 0.32, isActive ? 0.68 : 0.4, 4]} />
+              <meshBasicMaterial color={color} transparent opacity={isActive ? 0.92 : isPassed ? 0.6 : 0.42} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
+            </mesh>
+            <mesh raycast={NO_RAYCAST} position={[0, isActive ? 0.34 : 0.2, 0]} renderOrder={12}>
+              <sphereGeometry args={[isActive ? 0.12 : 0.075, 10, 8]} />
+              <meshBasicMaterial color={isActive ? "#fff1bb" : color} transparent opacity={isActive ? 1 : 0.82} depthWrite={false} depthTest={false} />
+            </mesh>
+            {isActive && <pointLight color="#efb05c" intensity={0.8} distance={3.8} decay={2} position={[0, 0.6, 0]} />}
+          </group>
+        )
+      })}
     </group>
   )
 }
@@ -1557,7 +1605,7 @@ function VisitorsLayer({ timeOfDay }: { timeOfDay: "day" | "night" }) {
   )
 }
 
-export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHover, timeOfDay = "day", season = "summer", onReady }: ForbiddenCityWorldProps) {
+export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, routeStopIds, activeRouteStopId, onSelect, onHover, timeOfDay = "day", season = "summer", onReady }: ForbiddenCityWorldProps) {
   return (
     <SeasonThemeProvider season={season}>
       <group>
@@ -1565,6 +1613,7 @@ export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, onSel
         <ForbiddenCityModel onReady={onReady} season={season} />
       </Suspense>
       <VisitorsLayer timeOfDay={timeOfDay} />
+      <ProcessionPath landmarks={SCENE_LANDMARKS} stopIds={routeStopIds ?? []} activeStopId={activeRouteStopId ?? null} />
       <LandmarkLayer
         landmarks={SCENE_LANDMARKS}
         selectedId={selectedId}
