@@ -78,11 +78,17 @@ export function SiteInspector({
         <button
           className="icon-button"
           type="button"
-          aria-label={isChinese ? "关闭地标详情" : "Close landmark details"}
+          aria-label={isChinese ? "关闭详情并返回图鉴" : "Close details and return to atlas"}
           onClick={onClose}
         >
           <X size={17} strokeWidth={1.5} aria-hidden="true" />
         </button>
+      </div>
+
+      <div className="site-inspector__mode" aria-label={isChinese ? "沉浸式现场视角" : "Immersive expedition view"}>
+        <span className="site-inspector__mode-mark" aria-hidden="true" />
+        <span className="micro">{isChinese ? "沉浸式现场" : "Expedition focus"}</span>
+        <span>{isChinese ? "拖动旋转 · 滚轮推进" : "Drag to orbit · scroll to enter"}</span>
       </div>
 
       <div className="site-inspector__category">

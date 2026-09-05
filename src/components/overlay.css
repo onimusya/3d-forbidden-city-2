@@ -812,6 +812,35 @@
   color: var(--atlas-dim);
 }
 
+.site-inspector__mode {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 15px;
+  padding: 8px 9px;
+  border: 1px solid rgba(226, 174, 83, 0.2);
+  background: rgba(226, 174, 83, 0.045);
+  color: var(--atlas-dim);
+  font-size: 0.56rem;
+  letter-spacing: 0.03em;
+}
+
+.site-inspector__mode .micro {
+  color: var(--atlas-gold-light);
+  font-size: 0.52rem;
+  letter-spacing: 0.11em;
+  white-space: nowrap;
+}
+
+.site-inspector__mode-mark {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--atlas-gold);
+  box-shadow: 0 0 0 4px rgba(226, 174, 83, 0.12), 0 0 12px rgba(226, 174, 83, 0.48);
+}
+
 .icon-button {
   display: inline-grid;
   width: 31px;

@@ -161,11 +161,14 @@ button { font: inherit; }
 
 @media (max-width: 820px) {
   .ui-layer.has-selection .discovery-rail { display: none; }
-  .ui-layer.has-selection .atlas-hero {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
+}
+
+.ui-layer.has-selection .atlas-hero {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition: opacity 360ms ease, transform 360ms ease, visibility 360ms ease;
 }
 
 .app-toast {
@@ -230,8 +233,7 @@ button { font: inherit; }
   font-size: 28px;
   line-height: 1;
   text-shadow: 0 0 5px currentColor, 0 0 14px currentColor;
-  transform-origin: center;
-  animation: landmark-star-spin 3.2s linear infinite, landmark-star-pulse 1.55s ease-in-out infinite;
+  animation: landmark-star-glow 1.55s ease-in-out infinite;
   pointer-events: auto;
   user-select: none;
 }
@@ -248,14 +250,9 @@ button { font: inherit; }
   text-shadow: 0 0 7px currentColor, 0 0 20px currentColor;
 }
 
-@keyframes landmark-star-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes landmark-star-pulse {
-  0%, 100% { opacity: .72; scale: .82; }
-  50% { opacity: 1; scale: 1.08; }
+@keyframes landmark-star-glow {
+  0%, 100% { opacity: .72; text-shadow: 0 0 5px currentColor, 0 0 12px currentColor; }
+  50% { opacity: 1; text-shadow: 0 0 8px currentColor, 0 0 20px currentColor; }
 }
 
 @media (prefers-reduced-motion: reduce) {

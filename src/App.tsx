@@ -173,6 +173,7 @@ export default function App() {
 
   const handleCloseInspector = () => {
     playSfx('close')
+    resetView()
     setSelected(null)
   }
 

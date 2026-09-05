@@ -592,6 +592,8 @@ export function LandmarkBeacon({
   const beaconRef = useRef<THREE.Group | null>(null)
   const haloRef = useRef<THREE.Mesh | null>(null)
   const starRef = useRef<THREE.Group | null>(null)
+  const focusRingRef = useRef<THREE.Mesh | null>(null)
+  const focusFrameRef = useRef<THREE.Mesh | null>(null)
   const phase = useMemo(() => {
     let total = 0
     for (const character of landmark.id) total += character.charCodeAt(0)
@@ -604,6 +606,10 @@ export function LandmarkBeacon({
   const markerScale = Math.max(0.7, landmark.scale)
   const hitSize = LANDMARK_HIT_SIZES[landmark.id] ?? [Math.max(4.2, markerScale * 2.8), 3.8, Math.max(3.4, markerScale * 2.3)]
   const starScale = Math.max(1.15, markerScale * 0.8)
+  const focusRadius = Math.max(2.2, Math.min(6.2, Math.max(hitSize[0], hitSize[2]) * 0.42))
+  const focusWidth = Math.min(9.5, Math.max(4.2, hitSize[0] * 0.84))
+  const focusDepth = Math.min(8.2, Math.max(3.8, hitSize[2] * 0.84))
+  const focusHeight = Math.min(5.4, Math.max(2.5, hitSize[1] * 0.82))
   const starShape = useMemo(() => {
     const shape = new THREE.Shape()
     const points = 8
@@ -634,6 +640,13 @@ export function LandmarkBeacon({
       starRef.current.scale.setScalar(starScale * ((active ? 1.08 : 0.86) + pulse * (active ? 0.16 : 0.09)))
       starRef.current.rotation.y += delta * (active ? 1.35 : 0.52)
       starRef.current.rotation.z = Math.sin(clock.elapsedTime * 1.4 + phase) * (active ? 0.12 : 0.07)
+    }
+    if (focusRingRef.current) {
+      focusRingRef.current.scale.setScalar(0.94 + pulse * 0.12)
+      focusRingRef.current.rotation.z += delta * 0.18
+    }
+    if (focusFrameRef.current) {
+      focusFrameRef.current.scale.setScalar(0.97 + pulse * 0.035)
     }
   })
 
@@ -679,7 +692,8 @@ export function LandmarkBeacon({
             <meshBasicMaterial color={landmark.accent} transparent opacity={active ? 0.82 : 0.46} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
           </mesh>
         </group>
-        <Html position={[0, 2.15 * starScale, 0]} center zIndexRange={[25, 0]} pointerEvents="auto">
+      </group>
+      <Html position={[0, 2.15 * starScale * markerScale, 0]} center zIndexRange={[25, 0]} pointerEvents="auto">
           <button
             className="landmark-star-cue"
             type="button"
@@ -704,7 +718,18 @@ export function LandmarkBeacon({
             ✦
           </button>
         </Html>
-      </group>
+      {selected && (
+        <group name="selected-landmark-focus" position={[0, 0.1, 0]}>
+          <mesh ref={focusRingRef} rotation={[-Math.PI / 2, 0, 0]} renderOrder={14}>
+            <ringGeometry args={[focusRadius * 0.86, focusRadius, 4]} />
+            <meshBasicMaterial color={landmark.accent} transparent opacity={0.72} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh ref={focusFrameRef} position={[0, focusHeight * 0.48, 0]} renderOrder={13}>
+            <boxGeometry args={[focusWidth, focusHeight, focusDepth]} />
+            <meshBasicMaterial color={landmark.accent} transparent opacity={0.22} depthWrite={false} depthTest={false} wireframe />
+          </mesh>
+        </group>
+      )}
       <mesh
         position={[0, 1.45, 0]}
         onPointerOver={(event) => {
@@ -746,7 +771,7 @@ export function LandmarkBeacon({
             </div>
             <div style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 16, lineHeight: 1.1 }}>{landmark.title}</div>
             <div style={{ color: '#9aa39d', fontSize: 11, marginTop: 4 }}>{landmark.chineseName}</div>
-            <div style={{ color: accent, fontFamily: "DM Mono, ui-monospace, monospace", fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 7 }}>Click to inspect ↗</div>
+            <div style={{ color: accent, fontFamily: "DM Mono, ui-monospace, monospace", fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 7 }}>{selected ? "Drag to orbit · Scroll to enter" : "Click to inspect ↗"}</div>
           </div>
         </Html>
       )}

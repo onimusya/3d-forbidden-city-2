@@ -287,12 +287,12 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
     const focusTarget = new THREE.Vector3(...landmark.position)
 
     // Keep the selected building above the mobile details sheet.
-    if (size.width <= 820) focusTarget.y -= 25
-    else focusTarget.y -= 0.6
+    if (size.width <= 820) focusTarget.y -= 38
+    else focusTarget.y -= 0.9
 
     const toPosition = focusTarget.clone().add(offset)
     const currentZoom = camera instanceof THREE.OrthographicCamera ? camera.zoom : responsiveZoom
-    const toZoom = THREE.MathUtils.clamp(Math.max(currentZoom, responsiveZoom * 1.28), responsiveZoom, MAX_SCENE_ZOOM)
+    const toZoom = THREE.MathUtils.clamp(Math.max(currentZoom, responsiveZoom * 1.48), responsiveZoom, MAX_SCENE_ZOOM)
     const reducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
     focusRef.current = {
