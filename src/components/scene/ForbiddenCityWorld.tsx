@@ -267,7 +267,7 @@ function ImperialBase() {
 function OuterFortifications({ onSelect, onHover }: LandmarkEventProps) {
   return (
     <group>
-      <WallRun position={point(0, 0, 19)} length={54} orientation="x" gap={8.4} />
+      <WallRun position={point(0, 0, 19)} length={54} orientation="x" gap={12} />
       <WallRun position={point(0, 0, -19)} length={54} orientation="x" gap={7.5} />
       <WallRun position={point(27, 0, 0)} length={36} orientation="z" gap={5.8} />
       <WallRun position={point(-27, 0, 0)} length={36} orientation="z" gap={5.8} />
@@ -275,12 +275,12 @@ function OuterFortifications({ onSelect, onHover }: LandmarkEventProps) {
       <WatchTower position={point(-26.45, 0, 18.35)} scale={0.88} />
       <WatchTower position={point(26.45, 0, -18.35)} scale={0.88} />
       <WatchTower position={point(-26.45, 0, -18.35)} scale={0.88} />
-      <GateHouse position={point(0, 0, 18.65)} width={8.2} depth={3.2} roofColor="#ae7f36" {...landmarkInteraction("meridian-gate", onSelect, onHover)} />
-      <GateHouse position={point(0, 0.34, 12.35)} width={8.8} depth={2.9} roofColor="#b78338" {...landmarkInteraction("gate-of-supreme-harmony", onSelect, onHover)} />
+      <GateHouse position={point(0, 0, 18.65)} width={11.2} depth={3.8} roofColor="#ae7f36" variant="meridian" {...landmarkInteraction("meridian-gate", onSelect, onHover)} />
+      <GateHouse position={point(0, 0.34, 12.35)} width={9.4} depth={3.2} roofColor="#b78338" {...landmarkInteraction("gate-of-supreme-harmony", onSelect, onHover)} />
       <GateHouse position={point(0, 0, -18.65)} width={7.4} depth={3.2} roofColor="#ae7f36" rotation={Math.PI} />
       <GateHouse position={point(26.65, 0, 0)} width={6.6} depth={3.05} roofColor="#2d5149" rotation={Math.PI / 2} {...landmarkInteraction("east-flower-gate", onSelect, onHover)} />
       <GateHouse position={point(-26.65, 0, 0)} width={6.6} depth={3.05} roofColor="#2d5149" rotation={-Math.PI / 2} />
-      <StoneBridge position={point(0, -0.02, 21.3)} width={8.2} depth={4.4} />
+      <StoneBridge position={point(0, -0.02, 21.3)} width={11.2} depth={4.8} />
       <StoneBridge position={point(0, -0.02, -21.3)} width={7.6} depth={4.2} rotation={Math.PI} />
       <StoneBridge position={point(30.1, -0.02, 0)} width={7.2} depth={4.2} rotation={Math.PI / 2} />
       <StoneBridge position={point(-30.1, -0.02, 0)} width={7.2} depth={4.2} rotation={-Math.PI / 2} />
@@ -310,12 +310,12 @@ function OuterCourts() {
 function CentralAxisBuildings({ onSelect, onHover }: LandmarkEventProps) {
   return (
     <group>
-      <PalaceBuilding position={point(0, 0.34, 6.05)} width={9.25} depth={5.4} height={2.65} roofColor="#d3a24e" tiers={2} {...landmarkInteraction("hall-of-supreme-harmony", onSelect, onHover)} />
-      <PalaceBuilding position={point(0, 0.34, 0.15)} width={6.8} depth={4.65} height={2.2} roofColor="#bf8f3d" tiers={2} {...landmarkInteraction("hall-of-central-harmony", onSelect, onHover)} />
-      <PalaceBuilding position={point(0, 0.34, -5.15)} width={8.05} depth={5.05} height={2.42} roofColor="#ca983f" tiers={2} {...landmarkInteraction("hall-of-preserving-harmony", onSelect, onHover)} />
-      <GateHouse position={point(0, 0.34, -8.4)} width={7.7} depth={2.7} roofColor="#9d794a" {...landmarkInteraction("gate-of-heavenly-purity", onSelect, onHover)} />
-      <PalaceBuilding position={point(0, 0.34, -11.45)} width={7.2} depth={4.7} height={2.15} roofColor="#b98539" tiers={2} {...landmarkInteraction("palace-of-heavenly-purity", onSelect, onHover)} />
-      <PalaceBuilding position={point(0, 0.34, -16.05)} width={6.7} depth={4.1} height={1.92} roofColor="#a97c38" tiers={1} {...landmarkInteraction("palace-of-earthly-tranquility", onSelect, onHover)} />
+      <PalaceBuilding position={point(0, 0.34, 6.05)} width={10.4} depth={6.1} height={2.65} roofColor="#d3a24e" tiers={2} {...landmarkInteraction("hall-of-supreme-harmony", onSelect, onHover)} />
+      <PalaceBuilding position={point(0, 0.34, 0.15)} width={6.0} depth={5.7} height={2.05} roofColor="#bf8f3d" tiers={1} {...landmarkInteraction("hall-of-central-harmony", onSelect, onHover)} />
+      <PalaceBuilding position={point(0, 0.34, -5.15)} width={9.1} depth={5.6} height={2.35} roofColor="#ca983f" tiers={1} {...landmarkInteraction("hall-of-preserving-harmony", onSelect, onHover)} />
+      <GateHouse position={point(0, 0.34, -8.4)} width={8.2} depth={2.9} roofColor="#9d794a" {...landmarkInteraction("gate-of-heavenly-purity", onSelect, onHover)} />
+      <PalaceBuilding position={point(0, 0.34, -11.45)} width={8.1} depth={5.2} height={2.2} roofColor="#b98539" tiers={2} {...landmarkInteraction("palace-of-heavenly-purity", onSelect, onHover)} />
+      <PalaceBuilding position={point(0, 0.34, -16.05)} width={7.5} depth={4.7} height={2.0} roofColor="#a97c38" tiers={1} {...landmarkInteraction("palace-of-earthly-tranquility", onSelect, onHover)} />
       <mesh castShadow position={[0, 0.5, 8.85]}>
         <boxGeometry args={[10.7, 0.3, 1.15]} />
         <meshStandardMaterial color="#c4a26e" roughness={0.86} />

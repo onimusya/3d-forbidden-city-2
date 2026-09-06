@@ -30,28 +30,128 @@ type RoofProps = {
   scale?: number
 }
 
+function createHipRoofGeometry(width: number, depth: number, height: number, eaveLift: number) {
+  const halfWidth = width / 2
+  const halfDepth = depth / 2
+  const ridgeHalf = Math.max(0.32, halfWidth - halfDepth * 0.36)
+  const positions: number[] = []
+  const indices: number[] = []
+
+  const addTriangle = (a: number[], b: number[], c: number[]) => {
+    const offset = positions.length / 3
+    positions.push(...a, ...b, ...c)
+    indices.push(offset, offset + 1, offset + 2)
+  }
+  const addQuad = (a: number[], b: number[], c: number[], d: number[]) => {
+    const offset = positions.length / 3
+    positions.push(...a, ...b, ...c, ...d)
+    indices.push(offset, offset + 1, offset + 2, offset, offset + 2, offset + 3)
+  }
+
+  addQuad(
+    [-halfWidth, eaveLift, -halfDepth],
+    [-ridgeHalf, height, 0],
+    [ridgeHalf, height, 0],
+    [halfWidth, eaveLift, -halfDepth],
+  )
+  addQuad(
+    [halfWidth, eaveLift, halfDepth],
+    [ridgeHalf, height, 0],
+    [-ridgeHalf, height, 0],
+    [-halfWidth, eaveLift, halfDepth],
+  )
+  addTriangle([halfWidth, eaveLift, -halfDepth], [ridgeHalf, height, 0], [halfWidth, eaveLift, halfDepth])
+  addTriangle([-halfWidth, eaveLift, halfDepth], [-ridgeHalf, height, 0], [-halfWidth, eaveLift, -halfDepth])
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+function roofEaveSegments(width: number, depth: number, lift: number) {
+  const result: Array<{ size: Vec3; position: Vec3; rotation: Vec3 }> = []
+  const segments = 4
+  const halfWidth = width / 2
+  const halfDepth = depth / 2
+
+  for (const side of [-1, 1]) {
+    for (let index = 0; index < segments; index += 1) {
+      const t0 = -1 + (index / segments) * 2
+      const t1 = -1 + ((index + 1) / segments) * 2
+      const x0 = t0 * halfWidth
+      const x1 = t1 * halfWidth
+      const y0 = lift * Math.pow(Math.abs(t0), 3)
+      const y1 = lift * Math.pow(Math.abs(t1), 3)
+      result.push({
+        size: [Math.hypot(x1 - x0, y1 - y0), 0.11, 0.15],
+        position: [(x0 + x1) / 2, (y0 + y1) / 2 - 0.035, side * (halfDepth + 0.035)],
+        rotation: [0, 0, -Math.atan2(y1 - y0, x1 - x0)],
+      })
+    }
+  }
+
+  for (const side of [-1, 1]) {
+    for (let index = 0; index < segments; index += 1) {
+      const t0 = -1 + (index / segments) * 2
+      const t1 = -1 + ((index + 1) / segments) * 2
+      const z0 = t0 * halfDepth
+      const z1 = t1 * halfDepth
+      const y0 = lift * Math.pow(Math.abs(t0), 3)
+      const y1 = lift * Math.pow(Math.abs(t1), 3)
+      result.push({
+        size: [0.15, 0.11, Math.hypot(z1 - z0, y1 - y0)],
+        position: [side * (halfWidth + 0.035), (y0 + y1) / 2 - 0.035, (z0 + z1) / 2],
+        rotation: [Math.atan2(y1 - y0, z1 - z0), 0, 0],
+      })
+    }
+  }
+
+  return result
+}
+
 export function ChineseRoof({ width, depth, y, color, ridgeColor = '#d4a34e', scale = 1 }: RoofProps) {
   const season = useContext(SEASON_THEME_CONTEXT)
   const roofWidth = width * scale
   const roofDepth = depth * scale
-  const roofHeight = Math.max(0.38, Math.min(0.72, Math.max(roofWidth, roofDepth) * 0.075))
-  const cornerX = roofWidth * 0.48
-  const cornerZ = roofDepth * 0.48
+  const roofHeight = Math.max(0.46, Math.min(1.02, Math.max(roofWidth, roofDepth) * 0.105))
+  const eaveLift = Math.max(0.12, Math.min(0.34, roofWidth * 0.028))
+  const roofGeometry = useMemo(() => createHipRoofGeometry(roofWidth, roofDepth, roofHeight, eaveLift), [eaveLift, roofDepth, roofHeight, roofWidth])
+  const eaveSegments = useMemo(() => roofEaveSegments(roofWidth, roofDepth, eaveLift), [eaveLift, roofDepth, roofWidth])
+  const ridgeLength = Math.max(0.6, roofWidth - roofDepth * 0.72)
+  const guardianCount = Math.max(3, Math.min(7, Math.round(roofWidth / 1.55)))
 
   return (
     <group position={[0, y, 0]}>
       <mesh castShadow receiveShadow position={[0, -0.08, 0]}>
-        <boxGeometry args={[roofWidth * 1.14, 0.16, roofDepth * 1.14]} />
+        <boxGeometry args={[roofWidth * 1.12, 0.12, roofDepth * 1.12]} />
         <meshStandardMaterial color={color} roughness={0.64} metalness={0.1} />
       </mesh>
-      <mesh castShadow position={[0, roofHeight * 0.1, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, roofDepth / roofWidth]}>
-        <coneGeometry args={[roofWidth * 0.57, roofHeight, 4]} />
-        <meshStandardMaterial color={color} roughness={0.58} metalness={0.12} flatShading />
+      <mesh castShadow receiveShadow>
+        <primitive object={roofGeometry} attach="geometry" />
+        <meshStandardMaterial color={color} roughness={0.58} metalness={0.12} side={THREE.DoubleSide} flatShading />
       </mesh>
-      <mesh castShadow position={[0, roofHeight * 0.55, 0]}>
-        <boxGeometry args={[roofWidth * 0.57, 0.1, 0.18]} />
+      {eaveSegments.map((segment, index) => (
+        <mesh key={'eave-' + index} castShadow receiveShadow position={segment.position} rotation={segment.rotation}>
+          <boxGeometry args={segment.size} />
+          <meshStandardMaterial color={ridgeColor} roughness={0.62} metalness={0.08} />
+        </mesh>
+      ))}
+      <mesh castShadow position={[0, roofHeight + 0.035, 0]}>
+        <boxGeometry args={[ridgeLength, 0.11, 0.18]} />
         <meshStandardMaterial color={ridgeColor} roughness={0.45} metalness={0.34} />
       </mesh>
+      {Array.from({ length: guardianCount }, (_, index) => {
+        const progress = guardianCount === 1 ? 0.5 : index / (guardianCount - 1)
+        const x = -ridgeLength * 0.42 + progress * ridgeLength * 0.84
+        return (
+          <mesh key={'guardian-' + index} castShadow position={[x, roofHeight + 0.13, 0]}>
+            <coneGeometry args={[0.07, 0.14, 6]} />
+            <meshStandardMaterial color={ridgeColor} roughness={0.42} metalness={0.36} />
+          </mesh>
+        )
+      })}
       {season === "winter" && (
         <group name="procedural-winter-snow">
           <mesh castShadow receiveShadow position={[0, roofHeight * 0.61, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, roofDepth / roofWidth]}>
@@ -65,12 +165,12 @@ export function ChineseRoof({ width, depth, y, color, ridgeColor = '#d4a34e', sc
         </group>
       )}
       {[
-        [-cornerX, cornerZ],
-        [cornerX, cornerZ],
-        [-cornerX, -cornerZ],
-        [cornerX, -cornerZ],
-      ].map(([x, z], index) => (
-        <mesh key={`roof-finial-${index}`} position={[x, 0.08, z]} castShadow>
+        [-roofWidth * 0.48, eaveLift + 0.04, roofDepth * 0.48],
+        [roofWidth * 0.48, eaveLift + 0.04, roofDepth * 0.48],
+        [-roofWidth * 0.48, eaveLift + 0.04, -roofDepth * 0.48],
+        [roofWidth * 0.48, eaveLift + 0.04, -roofDepth * 0.48],
+      ].map(([x, localY, z], index) => (
+        <mesh key={'corner-finial-' + index} position={[x, localY, z]} castShadow>
           <sphereGeometry args={[Math.max(0.08, roofWidth * 0.027), 6, 4]} />
           <meshStandardMaterial color={ridgeColor} roughness={0.46} metalness={0.4} />
         </mesh>
@@ -92,6 +192,52 @@ type PalaceBuildingProps = {
   accent?: string
 } & BuildingInteractionProps
 
+function StoneTerrace({ width, depth, levels = 2 }: { width: number; depth: number; levels?: number }) {
+  const stoneColors = ['#b5aa91', '#c4b99f', '#a69b84']
+  return (
+    <group>
+      {Array.from({ length: levels }, (_, index) => {
+        const factor = 1.2 - index * 0.07
+        const height = index === 0 ? 0.18 : 0.13
+        return (
+          <mesh key={'terrace-' + index} castShadow receiveShadow position={[0, 0.09 + index * 0.16, 0]}>
+            <boxGeometry args={[width * factor, height, depth * factor]} />
+            <meshStandardMaterial color={stoneColors[index % stoneColors.length]} roughness={0.9} />
+          </mesh>
+        )
+      })}
+      {levels >= 3 && (
+        <>
+          {[-1, 1].map((side) => (
+            <group key={'terrace-rail-' + side}>
+              <mesh castShadow position={[0, 0.55, side * depth * 0.62]}>
+                <boxGeometry args={[width * 1.02, 0.08, 0.08]} />
+                <meshStandardMaterial color="#d2c8ad" roughness={0.82} />
+              </mesh>
+              {Array.from({ length: Math.max(3, Math.round(width / 1.7)) }, (_, index) => {
+                const postCount = Math.max(3, Math.round(width / 1.7))
+                const x = -width * 0.5 + (index / Math.max(1, postCount - 1)) * width
+                return (
+                  <mesh key={'terrace-post-' + side + '-' + index} castShadow position={[x, 0.42, side * depth * 0.62]}>
+                    <boxGeometry args={[0.08, 0.34, 0.08]} />
+                    <meshStandardMaterial color="#d2c8ad" roughness={0.82} />
+                  </mesh>
+                )
+              })}
+            </group>
+          ))}
+          {Array.from({ length: 3 }, (_, index) => (
+            <mesh key={'terrace-step-' + index} castShadow position={[0, 0.28 + index * 0.11, -depth * (0.67 - index * 0.025)]}>
+              <boxGeometry args={[width * (0.23 - index * 0.035), 0.08, 0.48 - index * 0.08]} />
+              <meshStandardMaterial color="#d2c8ad" roughness={0.86} />
+            </mesh>
+          ))}
+        </>
+      )}
+    </group>
+  )
+}
+
 export function PalaceBuilding({
   position,
   width,
@@ -106,19 +252,15 @@ export function PalaceBuilding({
   onSelect,
   onHover,
 }: PalaceBuildingProps) {
-  const columnPositions: readonly [number, number][] = [
-    [-width * 0.34, -depth * 0.34],
-    [width * 0.34, -depth * 0.34],
-    [-width * 0.34, depth * 0.34],
-    [width * 0.34, depth * 0.34],
-  ]
-  const windowOffsets = [-0.25, 0, 0.25]
+  const columnCount = detail === 'full' ? Math.max(4, Math.round(width / 1.35)) : Math.max(3, Math.round(width / 1.8))
+  const windowCount = Math.max(3, Math.round(width / 1.65))
+  const bodyBase = 0.58
   const tiersData = Array.from({ length: tiers }, (_, index) => {
     const factor = 1 - index * 0.17
     return {
       width: width * factor,
       depth: depth * factor,
-      y: 0.9 + height + index * 0.48,
+      y: bodyBase + height + 0.16 + index * 0.58,
     }
   })
 
@@ -141,46 +283,48 @@ export function PalaceBuilding({
         onSelect()
       }}
     >
-      <mesh castShadow receiveShadow position={[0, 0.2, 0]}>
-        <boxGeometry args={[width * 1.2, 0.4, depth * 1.2]} />
-        <meshStandardMaterial color="#95805d" roughness={0.87} />
-      </mesh>
-      <mesh castShadow receiveShadow position={[0, 0.48, 0]}>
-        <boxGeometry args={[width * 1.04, 0.16, depth * 1.04]} />
-        <meshStandardMaterial color={trimColor} roughness={0.75} />
-      </mesh>
-      <mesh castShadow receiveShadow position={[0, 0.86 + height * 0.5, 0]}>
-        <boxGeometry args={[width * 0.78, height, depth * 0.7]} />
+      <StoneTerrace width={width} depth={depth} levels={tiers > 1 ? 3 : 2} />
+      <mesh castShadow receiveShadow position={[0, bodyBase + height * 0.5, 0]}>
+        <boxGeometry args={[width * 0.76, height, depth * 0.62]} />
         <meshStandardMaterial color={wallColor} roughness={0.82} />
       </mesh>
-      <mesh castShadow position={[0, 0.88 + height * 0.08, depth * 0.37]}>
-        <boxGeometry args={[width * 0.82, 0.11, 0.13]} />
-        <meshStandardMaterial color={trimColor} roughness={0.56} metalness={0.16} />
-      </mesh>
-      <mesh castShadow position={[0, 0.88 + height * 0.08, -depth * 0.37]}>
-        <boxGeometry args={[width * 0.82, 0.11, 0.13]} />
-        <meshStandardMaterial color={trimColor} roughness={0.56} metalness={0.16} />
-      </mesh>
-      {columnPositions.map(([x, z], index) => (
-        <mesh key={`column-${index}`} castShadow position={[x, 0.86 + height * 0.5, z]}>
-          <boxGeometry args={[Math.max(0.16, width * 0.055), height * 1.04, Math.max(0.16, depth * 0.055)]} />
-          <meshStandardMaterial color={trimColor} roughness={0.56} metalness={0.16} />
-        </mesh>
+      {[-1, 1].map((side) => (
+        <group key={'building-side-' + side}>
+          {Array.from({ length: columnCount }, (_, index) => {
+            const x = -width * 0.34 + (index / Math.max(1, columnCount - 1)) * width * 0.68
+            return (
+              <mesh key={'column-' + side + '-' + index} castShadow position={[x, bodyBase + height * 0.49, side * depth * 0.35]}>
+                <boxGeometry args={[Math.max(0.14, width * 0.038), height * 0.92, Math.max(0.16, depth * 0.055)]} />
+                <meshStandardMaterial color={trimColor} roughness={0.56} metalness={0.16} />
+              </mesh>
+            )
+          })}
+          <mesh castShadow position={[0, bodyBase + height * 0.12, side * depth * 0.355]}>
+            <boxGeometry args={[width * 0.82, 0.12, 0.16]} />
+            <meshStandardMaterial color={trimColor} roughness={0.56} metalness={0.16} />
+          </mesh>
+          <mesh castShadow position={[0, bodyBase + height * 0.86, side * depth * 0.015]}>
+            <boxGeometry args={[width * 0.88, 0.2, depth * 0.72]} />
+            <meshStandardMaterial color="#2e544f" roughness={0.56} metalness={0.12} />
+          </mesh>
+        </group>
       ))}
-      {detail === 'full' &&
-        windowOffsets.flatMap((offset, index) => [
-          <mesh key={`front-window-${index}`} position={[width * offset, 0.98 + height * 0.55, depth * 0.359]}>
-            <boxGeometry args={[Math.max(0.24, width * 0.1), Math.max(0.22, height * 0.22), 0.025]} />
+      <mesh castShadow position={[0, bodyBase + height * 0.86, 0]}>
+        <boxGeometry args={[width * 0.88, 0.14, depth * 0.72]} />
+        <meshStandardMaterial color="#2e544f" roughness={0.56} metalness={0.12} />
+      </mesh>
+      {detail === 'full' && Array.from({ length: windowCount }, (_, index) => {
+        const x = -width * 0.29 + (index / Math.max(1, windowCount - 1)) * width * 0.58
+        return [-1, 1].map((side) => (
+          <mesh key={'window-' + index + '-' + side} position={[x, bodyBase + height * 0.57, side * depth * 0.322]}>
+            <boxGeometry args={[Math.max(0.2, width * 0.07), Math.max(0.22, height * 0.22), 0.025]} />
             <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.12} roughness={0.44} />
-          </mesh>,
-          <mesh key={`back-window-${index}`} position={[width * offset, 0.98 + height * 0.55, -depth * 0.359]}>
-            <boxGeometry args={[Math.max(0.24, width * 0.1), Math.max(0.22, height * 0.22), 0.025]} />
-            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.12} roughness={0.44} />
-          </mesh>,
-        ])}
+          </mesh>
+        ))
+      })}
       {tiersData.map((tier, index) => (
         <ChineseRoof
-          key={`tier-${index}`}
+          key={'tier-' + index}
           width={tier.width}
           depth={tier.depth}
           y={tier.y}
@@ -189,7 +333,7 @@ export function PalaceBuilding({
         />
       ))}
       {tiers > 1 && (
-        <mesh castShadow position={[0, 0.9 + height + (tiers - 1) * 0.48 + 0.55, 0]}>
+        <mesh castShadow position={[0, bodyBase + height + (tiers - 1) * 0.58 + 0.72, 0]}>
           <cylinderGeometry args={[0.07, 0.1, 0.55, 6]} />
           <meshStandardMaterial color={accent} roughness={0.42} metalness={0.42} />
         </mesh>
@@ -267,6 +411,7 @@ type GateHouseProps = {
   width?: number
   depth?: number
   roofColor?: string
+  variant?: 'standard' | 'meridian'
 } & BuildingInteractionProps
 
 export function GateHouse({
@@ -275,10 +420,14 @@ export function GateHouse({
   width = 7.8,
   depth = 3.25,
   roofColor = '#b78338',
+  variant = 'standard',
   onSelect,
   onHover,
 }: GateHouseProps) {
-  const columnX = [-width * 0.38, 0, width * 0.38]
+  const isMeridian = variant === 'meridian'
+  const columnCount = isMeridian ? 7 : 3
+  const doorCount = isMeridian ? 5 : 1
+  const bodyBase = 0.58
 
   return (
     <group
@@ -300,35 +449,57 @@ export function GateHouse({
         onSelect()
       }}
     >
-      <mesh castShadow receiveShadow position={[0, 0.25, 0]}>
-        <boxGeometry args={[width * 1.1, 0.5, depth * 1.18]} />
-        <meshStandardMaterial color="#95805d" roughness={0.85} />
-      </mesh>
-      <mesh castShadow receiveShadow position={[0, 1.12, 0]}>
-        <boxGeometry args={[width * 0.84, 1.55, depth * 0.82]} />
+      <StoneTerrace width={width} depth={depth} levels={isMeridian ? 2 : 1} />
+      <mesh castShadow receiveShadow position={[0, bodyBase + 0.78, 0]}>
+        <boxGeometry args={[width * 0.84, 1.55, depth * 0.78]} />
         <meshStandardMaterial color="#773027" roughness={0.8} />
       </mesh>
-      {columnX.map((x, index) => (
-        <mesh key={`gate-column-${index}`} castShadow position={[x, 1.14, depth * 0.43]}>
-          <boxGeometry args={[0.3, 1.75, 0.3]} />
-          <meshStandardMaterial color="#cc9344" roughness={0.56} metalness={0.18} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0.87, depth * 0.425]}>
-        <boxGeometry args={[width * 0.34, 1.08, 0.035]} />
-        <meshStandardMaterial color="#1b2522" roughness={0.72} />
-      </mesh>
-      {[-0.11, 0, 0.11].map((offset, index) => (
-        <mesh key={`gate-door-${index}`} position={[width * offset, 0.84, depth * 0.45]}>
-          <boxGeometry args={[0.055, 0.94, 0.05]} />
-          <meshStandardMaterial color="#d7a84e" roughness={0.42} metalness={0.3} />
-        </mesh>
-      ))}
-      <ChineseRoof width={width * 1.12} depth={depth * 1.25} y={2.02} color={roofColor} ridgeColor="#e2ae53" />
-      <mesh castShadow position={[0, 2.53, 0]}>
-        <cylinderGeometry args={[0.09, 0.13, 0.42, 6]} />
-        <meshStandardMaterial color="#e2ae53" roughness={0.4} metalness={0.4} />
-      </mesh>
+      {Array.from({ length: columnCount }, (_, index) => {
+        const x = -width * 0.38 + (index / Math.max(1, columnCount - 1)) * width * 0.76
+        return (
+          <mesh key={'gate-column-' + index} castShadow position={[x, bodyBase + 0.78, depth * 0.43]}>
+            <boxGeometry args={[0.22, 1.72, 0.28]} />
+            <meshStandardMaterial color="#cc9344" roughness={0.56} metalness={0.18} />
+          </mesh>
+        )
+      })}
+      {Array.from({ length: doorCount }, (_, index) => {
+        const x = isMeridian ? -width * 0.33 + (index / Math.max(1, doorCount - 1)) * width * 0.66 : 0
+        return (
+          <group key={'gate-door-' + index}>
+            <mesh position={[x, bodyBase + 0.3, depth * 0.425]}>
+              <boxGeometry args={[isMeridian ? width * 0.105 : width * 0.34, 1.08, 0.035]} />
+              <meshStandardMaterial color="#1b2522" roughness={0.72} />
+            </mesh>
+            <mesh position={[x, bodyBase + 0.27, depth * 0.45]}>
+              <boxGeometry args={[0.055, 0.94, 0.05]} />
+              <meshStandardMaterial color="#d7a84e" roughness={0.42} metalness={0.3} />
+            </mesh>
+          </group>
+        )
+      })}
+      {isMeridian ? (
+        <>
+          {[-0.41, -0.205, 0, 0.205, 0.41].map((offset, index) => (
+            <group key={'meridian-roof-' + index} position={[width * offset, 0, 0]}>
+              <ChineseRoof width={index === 2 ? width * 0.29 : width * 0.21} depth={depth * 0.92} y={2.16} color={roofColor} ridgeColor="#e2ae53" />
+            </group>
+          ))}
+          <ChineseRoof width={width * 0.34} depth={depth * 1.04} y={2.7} color={roofColor} ridgeColor="#e2ae53" scale={0.82} />
+          <mesh castShadow position={[0, 3.22, 0]}>
+            <cylinderGeometry args={[0.09, 0.13, 0.42, 6]} />
+            <meshStandardMaterial color="#e2ae53" roughness={0.4} metalness={0.4} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <ChineseRoof width={width * 1.12} depth={depth * 1.25} y={2.02} color={roofColor} ridgeColor="#e2ae53" />
+          <mesh castShadow position={[0, 2.53, 0]}>
+            <cylinderGeometry args={[0.09, 0.13, 0.42, 6]} />
+            <meshStandardMaterial color="#e2ae53" roughness={0.4} metalness={0.4} />
+          </mesh>
+        </>
+      )}
     </group>
   )
 }
