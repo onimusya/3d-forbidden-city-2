@@ -293,6 +293,7 @@ button { font: inherit; }
 .visitor-role-label--concubine { color: #efaa9e; border-color: rgba(239, 170, 158, .48); }
 .visitor-role-label--eunuch { color: #dcb363; border-color: rgba(220, 179, 99, .48); }
 .visitor-role-label--fireworks { color: #f4c96f; border-color: rgba(244, 201, 111, .62); box-shadow: 0 0 16px rgba(240, 125, 97, .22); }
+.visitor-role-label--tai-chi { color: #9ed8d2; border-color: rgba(158, 216, 210, .58); box-shadow: 0 0 14px rgba(82, 158, 145, .2); }
 
 @media (prefers-reduced-motion: reduce) {
   .visitor-role-label { transform: translateY(-3px); }

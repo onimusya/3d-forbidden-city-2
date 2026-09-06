@@ -574,7 +574,7 @@ function ProceduralWorld({ selectedId, hoveredId, discoveredIds, onSelect, onHov
 }
 
 
-type VisitorAction = 'tour' | 'run' | 'play' | 'observe'
+type VisitorAction = 'tour' | 'run' | 'play' | 'observe' | 'tai-chi'
 type VisitorRole = 'emperor' | 'queen' | 'concubine' | 'eunuch'
 
 const VISITOR_ROLE_LABELS: Record<VisitorRole, string> = {
@@ -665,6 +665,39 @@ const VISITOR_PALETTES: Record<string, VisitorPalette> = {
 }
 
 const VISITORS: readonly VisitorConfig[] = [
+  {
+    id: 'east-court-tai-chi',
+    action: 'tai-chi',
+    palette: 'jade',
+    route: [[8.4, 10.2]],
+    speed: 0,
+    phase: 0.4,
+    groundY: 0.59,
+    scale: 0.9,
+    heading: Math.PI / 2,
+  },
+  {
+    id: 'west-court-tai-chi',
+    action: 'tai-chi',
+    palette: 'indigo',
+    route: [[-8.4, 0.55]],
+    speed: 0,
+    phase: 2.3,
+    groundY: 0.59,
+    scale: 0.88,
+    heading: -Math.PI / 2,
+  },
+  {
+    id: 'garden-tai-chi',
+    action: 'tai-chi',
+    palette: 'lotus',
+    route: [[9.3, -13.15]],
+    speed: 0,
+    phase: 4.1,
+    groundY: 0.57,
+    scale: 0.84,
+    heading: Math.PI,
+  },
   {
     id: 'axis-tourist',
     action: 'tour',
@@ -824,6 +857,8 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
   const trailMaterialRef = useRef<THREE.MeshBasicMaterial>(null)
   const rolePropRef = useRef<THREE.Group>(null)
   const fanRef = useRef<THREE.Group>(null)
+  const qiOrbRef = useRef<THREE.Mesh>(null)
+  const qiHaloRef = useRef<THREE.Mesh>(null)
   const palette = VISITOR_PALETTES[config.palette]
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -895,16 +930,19 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
 
     const isRunning = config.action === 'run'
     const isWalking = config.action === 'tour'
-    const cycleRate = isRunning ? 13 : config.action === 'play' ? 5 : 7
+    const isTaiChi = config.action === 'tai-chi'
+    const cycleRate = isRunning ? 13 : config.action === 'play' ? 5 : isTaiChi ? 1.2 : 7
     const cycle = elapsed * cycleRate + config.phase
     const gait = Math.sin(cycle)
-    const bounce = config.action === 'play'
-      ? Math.abs(Math.sin(cycle * 0.95)) * 0.23
-      : Math.abs(gait) * (isRunning ? 0.14 : isWalking ? 0.11 : 0.08)
+    const bounce = isTaiChi
+      ? 0.018 + Math.abs(Math.sin(cycle * 0.5)) * 0.018
+      : config.action === 'play'
+        ? Math.abs(Math.sin(cycle * 0.95)) * 0.23
+        : Math.abs(gait) * (isRunning ? 0.14 : isWalking ? 0.11 : 0.08)
 
     root.position.y = config.groundY + bounce
     root.scale.setScalar(config.scale * (1 + Math.sin(cycle * 0.46 + 0.5) * (config.action === 'observe' ? 0.028 : 0.018)))
-    root.rotation.z = isRunning ? Math.sin(cycle * 0.7) * 0.12 : config.action === 'play' ? Math.sin(cycle * 0.65) * 0.14 : isWalking ? Math.sin(cycle * 0.7) * 0.055 : Math.sin(cycle * 0.45) * 0.04
+    root.rotation.z = isRunning ? Math.sin(cycle * 0.7) * 0.12 : config.action === 'play' ? Math.sin(cycle * 0.65) * 0.14 : isTaiChi ? Math.sin(cycle * 0.5) * 0.045 : isWalking ? Math.sin(cycle * 0.7) * 0.055 : Math.sin(cycle * 0.45) * 0.04
 
     if (motionRingRef.current) {
       const pulse = (Math.sin(cycle * 1.45) + 1) / 2
@@ -925,15 +963,40 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
       trailMaterialRef.current.opacity = 0.1 + trailPulse * 0.14
     }
 
-    const stride = isRunning ? 1.35 : isWalking ? 0.9 : config.action === 'play' ? 0.45 : 0.12
+    const stride = isRunning ? 1.35 : isWalking ? 0.9 : config.action === 'play' ? 0.45 : isTaiChi ? 0 : 0.12
     if (leftLegRef.current) leftLegRef.current.rotation.x = gait * stride
     if (rightLegRef.current) rightLegRef.current.rotation.x = -gait * stride
     if (leftArmRef.current) leftArmRef.current.rotation.x = -gait * stride * 0.72
     if (rightArmRef.current) rightArmRef.current.rotation.x = gait * stride * 0.72
 
+    if (isTaiChi) {
+      const breath = Math.sin(cycle * 0.5)
+      const circle = Math.sin(cycle * 0.5 + Math.PI / 2)
+      if (leftLegRef.current) leftLegRef.current.rotation.x = 0.08 + breath * 0.045
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -0.08 - breath * 0.045
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.x = -0.32 - breath * 0.16
+        leftArmRef.current.rotation.z = 0.38 + circle * 0.12
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = 0.44 + breath * 0.16
+        rightArmRef.current.rotation.z = -0.38 - circle * 0.12
+      }
+      if (qiOrbRef.current) {
+        const qiPulse = 0.92 + (Math.sin(cycle * 0.5 + 0.8) + 1) * 0.1
+        qiOrbRef.current.position.set(0, 0.57 + breath * 0.09, 0.24 + circle * 0.035)
+        qiOrbRef.current.scale.setScalar(qiPulse)
+      }
+      if (qiHaloRef.current) {
+        qiHaloRef.current.position.set(0, 0.57 + breath * 0.09, 0.24 + circle * 0.035)
+        qiHaloRef.current.rotation.z = cycle * 0.32
+        qiHaloRef.current.scale.setScalar(0.88 + (Math.sin(cycle * 0.5) + 1) * 0.1)
+      }
+    }
+
     if (bodyRef.current) {
       bodyRef.current.rotation.x = isRunning ? -0.3 : isWalking ? Math.sin(cycle * 0.7) * 0.06 : 0
-      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.12 : 0
+      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.12 : isTaiChi ? Math.sin(cycle * 0.5) * 0.05 : 0
     }
     if (headRef.current) {
       headRef.current.rotation.y = config.action === 'observe' ? Math.sin(cycle * 0.25) * 0.32 : isWalking ? Math.sin(cycle * 0.42) * 0.14 : 0
@@ -1189,6 +1252,19 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
         </mesh>
       )}
 
+      {config.action === 'tai-chi' && (
+        <>
+          <mesh ref={qiHaloRef} raycast={NO_RAYCAST} position={[0, 0.57, 0.24]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.14, 0.014, 8, 24]} />
+            <meshBasicMaterial color={palette.accent} transparent opacity={0.52} depthWrite={false} />
+          </mesh>
+          <mesh ref={qiOrbRef} raycast={NO_RAYCAST} position={[0, 0.57, 0.24]}>
+            <sphereGeometry args={[0.055, 12, 8]} />
+            <meshBasicMaterial color={palette.accent} transparent opacity={0.86} toneMapped={false} />
+          </mesh>
+        </>
+      )}
+
       {config.action === 'observe' && (
         <group position={[0.16, 0.51, 0.15]} rotation={[-0.18, 0.14, -0.1]}>
           <mesh raycast={NO_RAYCAST} castShadow>
@@ -1202,11 +1278,11 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
         </group>
       )}
 
-      {config.role && (
+      {(config.role || config.action === 'tai-chi') && (
         <Html occlude position={[0, 1.48, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: 'none' }}>
-          <div className={'visitor-role-label visitor-role-label--' + config.role}>
+          <div className={'visitor-role-label visitor-role-label--' + (config.role ?? 'tai-chi')}>
             <span className="visitor-role-label__dot" />
-            {VISITOR_ROLE_LABELS[config.role]}
+            {config.role ? VISITOR_ROLE_LABELS[config.role] : 'TAI-CHI'}
           </div>
         </Html>
       )}

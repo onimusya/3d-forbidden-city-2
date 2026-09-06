@@ -24,7 +24,7 @@ export type MapSceneProps = {
 
 const BASE_MAP_WIDTH = 86
 const BASE_MAP_HEIGHT = 68
-const MAX_SCENE_ZOOM = 28
+const MAX_SCENE_ZOOM = 40
 
 function getResponsiveZoom(width: number, height: number) {
   const widthZoom = width / BASE_MAP_WIDTH
@@ -294,7 +294,7 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
 
     const toPosition = focusTarget.clone().add(offset)
     const currentZoom = camera instanceof THREE.OrthographicCamera ? camera.zoom : responsiveZoom
-    const toZoom = THREE.MathUtils.clamp(Math.max(currentZoom, responsiveZoom * 1.48), responsiveZoom, MAX_SCENE_ZOOM)
+    const toZoom = THREE.MathUtils.clamp(Math.max(currentZoom, responsiveZoom * 1.62), responsiveZoom, MAX_SCENE_ZOOM)
     const reducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
     focusRef.current = {
@@ -373,10 +373,10 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
         screenSpacePanning
         rotateSpeed={0.54}
         panSpeed={0.68}
-        zoomSpeed={0.72}
+        zoomSpeed={0.84}
         minPolarAngle={0.48}
         maxPolarAngle={1.47}
-        minZoom={4.7}
+        minZoom={4.5}
         maxZoom={MAX_SCENE_ZOOM}
         target={[0, 0.1, 0]}
         mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
