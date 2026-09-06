@@ -863,6 +863,13 @@ const TAI_CHI_POSES: readonly TaiChiPose[] = [
   { leftArmX: -0.04, leftArmZ: 0.13, rightArmX: 0.1, rightArmZ: -0.13, leftLegX: 0.04, rightLegX: -0.04, bodyX: 0, bodyZ: 0, rootZ: 0, qiX: 0, qiY: 0.52, qiZ: 0.18 },
 ]
 
+const TAI_CHI_ACTION_LABELS = ['GATHER', 'CLOUD HANDS', 'PUSH PALMS', 'BRUSH KNEE', 'CLOSE'] as const
+
+function getTaiChiAction(progress: number) {
+  const normalized = ((progress % 1) + 1) % 1
+  return TAI_CHI_ACTION_LABELS[Math.floor(normalized * TAI_CHI_ACTION_LABELS.length) % TAI_CHI_ACTION_LABELS.length]
+}
+
 function smoothTaiChi(value: number) {
   const t = THREE.MathUtils.clamp(value, 0, 1)
   return t * t * (3 - 2 * t)
@@ -912,6 +919,8 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
   const fanRef = useRef<THREE.Group>(null)
   const qiOrbRef = useRef<THREE.Mesh>(null)
   const qiHaloRef = useRef<THREE.Mesh>(null)
+  const taiChiArcRef = useRef<THREE.Mesh>(null)
+  const taiChiActionRef = useRef<HTMLSpanElement>(null)
   const palette = VISITOR_PALETTES[config.palette]
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -987,7 +996,11 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
     const cycleRate = isRunning ? 13 : config.action === 'play' ? 5 : isTaiChi ? 0.75 : 7
     const cycle = elapsed * cycleRate + config.phase
     const gait = Math.sin(cycle)
-    const taiChiPose = isTaiChi ? sampleTaiChiPose(elapsed * 0.065 + config.phase * 0.028) : null
+    const taiChiProgress = elapsed * 0.065 + config.phase * 0.028
+    const taiChiPose = isTaiChi ? sampleTaiChiPose(taiChiProgress) : null
+    if (isTaiChi && taiChiActionRef.current) {
+      taiChiActionRef.current.textContent = 'TAI-CHI · ' + getTaiChiAction(taiChiProgress)
+    }
     const bounce = isTaiChi
       ? 0.018 + Math.abs(Math.sin(cycle * 0.5)) * 0.018
       : config.action === 'play'
@@ -1044,6 +1057,11 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
         qiHaloRef.current.position.set(taiChiPose.qiX, taiChiPose.qiY + breath * 0.025, taiChiPose.qiZ)
         qiHaloRef.current.rotation.z = cycle * 0.22
         qiHaloRef.current.scale.setScalar(0.86 + (Math.sin(cycle * 0.5) + 1) * 0.12)
+      }
+      if (taiChiArcRef.current) {
+        taiChiArcRef.current.rotation.y = cycle * 0.18
+        taiChiArcRef.current.rotation.z = taiChiPose.bodyZ
+        taiChiArcRef.current.scale.setScalar(0.92 + (Math.sin(cycle * 0.5) + 1) * 0.14)
       }
     }
 
@@ -1315,12 +1333,16 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
 
       {config.action === 'tai-chi' && (
         <>
+          <mesh ref={taiChiArcRef} raycast={NO_RAYCAST} position={[0, 0.6, 0.17]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.34, 0.022, 8, 24, Math.PI * 1.22]} />
+            <meshBasicMaterial color={palette.accent} transparent opacity={0.46} depthWrite={false} />
+          </mesh>
           <mesh ref={qiHaloRef} raycast={NO_RAYCAST} position={[0, 0.57, 0.24]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.14, 0.014, 8, 24]} />
-            <meshBasicMaterial color={palette.accent} transparent opacity={0.52} depthWrite={false} />
+            <torusGeometry args={[0.2, 0.02, 8, 24]} />
+            <meshBasicMaterial color={palette.accent} transparent opacity={0.58} depthWrite={false} />
           </mesh>
           <mesh ref={qiOrbRef} raycast={NO_RAYCAST} position={[0, 0.57, 0.24]}>
-            <sphereGeometry args={[0.055, 12, 8]} />
+            <sphereGeometry args={[0.075, 12, 8]} />
             <meshBasicMaterial color={palette.accent} transparent opacity={0.86} toneMapped={false} />
           </mesh>
         </>
@@ -1343,7 +1365,7 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
         <Html occlude position={[0, 1.48, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: 'none' }}>
           <div className={'visitor-role-label visitor-role-label--' + (config.role ?? 'tai-chi')}>
             <span className="visitor-role-label__dot" />
-            {config.role ? VISITOR_ROLE_LABELS[config.role] : 'TAI-CHI'}
+            {config.role ? VISITOR_ROLE_LABELS[config.role] : <span ref={taiChiActionRef}>TAI-CHI · GATHER</span>}
           </div>
         </Html>
       )}
