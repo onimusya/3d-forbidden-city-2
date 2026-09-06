@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { ArrowUpRight, ChevronDown, ChevronUp, MousePointer2, Navigation, Rotate3D, ZoomIn } from 'lucide-react'
+import { Archive, ArrowUpRight, ChevronDown, ChevronUp, MousePointer2, Navigation, Rotate3D, ZoomIn } from 'lucide-react'
 
 import './overlay.css'
 
@@ -7,6 +7,7 @@ export interface InteractionHintProps {
   defaultExpanded?: boolean
   onToggle?: (expanded: boolean) => void
   onOpenProcessions?: () => void
+  onOpenJournal?: () => void
   label?: string
   language?: 'en' | 'zh'
 }
@@ -15,6 +16,7 @@ export function InteractionHint({
   defaultExpanded = true,
   onToggle,
   onOpenProcessions,
+  onOpenJournal,
   label = 'Navigate the field',
   language = 'en',
 }: InteractionHintProps) {
@@ -70,6 +72,21 @@ export function InteractionHint({
           <span>
             <strong>{isChinese ? "选择游线" : "Choose a procession"}</strong>
             <small>{isChinese ? "沿着策划路线漫游" : "Follow a curated route"}</small>
+          </span>
+          <ArrowUpRight size={14} strokeWidth={1.5} aria-hidden="true" />
+        </button>
+      ) : null}
+      {onOpenJournal ? (
+        <button
+          className="interaction-hint__journal-button"
+          type="button"
+          aria-label={isChinese ? "打开探索档案" : "Open field journal"}
+          onClick={onOpenJournal}
+        >
+          <Archive size={14} strokeWidth={1.5} aria-hidden="true" />
+          <span>
+            <strong>{isChinese ? "探索档案" : "Field journal"}</strong>
+            <small>{isChinese ? "查看印记与游线" : "Review seals and routes"}</small>
           </span>
           <ArrowUpRight size={14} strokeWidth={1.5} aria-hidden="true" />
         </button>

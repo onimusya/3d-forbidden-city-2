@@ -5,12 +5,29 @@ import type { Language } from '../lib/i18n'
 export type TimeOfDay = "day" | "night"
 export type Season = "spring" | "summer" | "autumn" | "winter"
 
+export type AtlasMoment = {
+  season: Season
+  timeOfDay: TimeOfDay
+}
+
+export type DiscoveryRecord = AtlasMoment & {
+  id: string
+  discoveredAt: string
+}
+
+export type RouteCompletion = AtlasMoment & {
+  routeId: string
+  completedAt: string
+}
+
 const SEASON_ORDER: readonly Season[] = ["spring", "summer", "autumn", "winter"]
 
 type AtlasState = {
   selectedId: string | null
   hoveredId: string | null
   discoveredIds: string[]
+  discoveryRecords: DiscoveryRecord[]
+  completedRoutes: RouteCompletion[]
   language: Language
   progressOpen: boolean
   helpVisible: boolean
@@ -20,7 +37,8 @@ type AtlasState = {
   resetViewSignal: number
   setSelected: (id: string | null) => void
   setHovered: (id: string | null) => void
-  discover: (id: string) => boolean
+  discover: (id: string, moment?: AtlasMoment) => boolean
+  completeRoute: (routeId: string, moment?: AtlasMoment) => boolean
   setLanguage: (language: Language) => void
   setProgressOpen: (open: boolean) => void
   setHelpVisible: (visible: boolean) => void
@@ -36,6 +54,8 @@ export const useAtlasStore = create<AtlasState>()(
       selectedId: null,
       hoveredId: null,
       discoveredIds: [],
+      discoveryRecords: [],
+      completedRoutes: [],
       language: 'en',
       progressOpen: false,
       helpVisible: true,
@@ -45,10 +65,20 @@ export const useAtlasStore = create<AtlasState>()(
       resetViewSignal: 0,
       setSelected: (selectedId) => set({ selectedId }),
       setHovered: (hoveredId) => set({ hoveredId }),
-      discover: (id) => {
+      discover: (id, moment = { season: "summer", timeOfDay: "day" }) => {
         const { discoveredIds } = get()
         if (discoveredIds.includes(id)) return false
-        set({ discoveredIds: [...discoveredIds, id] })
+        set((state) => ({
+          discoveredIds: [...discoveredIds, id],
+          discoveryRecords: [...state.discoveryRecords, { id, discoveredAt: new Date().toISOString(), ...moment }],
+        }))
+        return true
+      },
+      completeRoute: (routeId, moment = { season: "summer", timeOfDay: "day" }) => {
+        if (get().completedRoutes.some((route) => route.routeId === routeId)) return false
+        set((state) => ({
+          completedRoutes: [...state.completedRoutes, { routeId, completedAt: new Date().toISOString(), ...moment }],
+        }))
         return true
       },
       setLanguage: (language) => set({ language }),
@@ -66,6 +96,8 @@ export const useAtlasStore = create<AtlasState>()(
       name: 'forbidden-city-atlas',
       partialize: (state) => ({
         discoveredIds: state.discoveredIds,
+        discoveryRecords: state.discoveryRecords,
+        completedRoutes: state.completedRoutes,
         language: state.language,
         soundEnabled: state.soundEnabled,
         timeOfDay: state.timeOfDay,
