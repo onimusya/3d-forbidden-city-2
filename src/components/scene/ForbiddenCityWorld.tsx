@@ -840,6 +840,59 @@ type RouteSegment = {
   length: number
 }
 
+type TaiChiPose = {
+  leftArmX: number
+  leftArmZ: number
+  rightArmX: number
+  rightArmZ: number
+  leftLegX: number
+  rightLegX: number
+  bodyX: number
+  bodyZ: number
+  rootZ: number
+  qiX: number
+  qiY: number
+  qiZ: number
+}
+
+const TAI_CHI_POSES: readonly TaiChiPose[] = [
+  { leftArmX: -0.28, leftArmZ: 0.35, rightArmX: 0.34, rightArmZ: -0.35, leftLegX: 0.06, rightLegX: -0.06, bodyX: 0.02, bodyZ: 0, rootZ: 0, qiX: 0, qiY: 0.56, qiZ: 0.18 },
+  { leftArmX: -0.08, leftArmZ: 0.72, rightArmX: 0.18, rightArmZ: -0.62, leftLegX: 0.13, rightLegX: -0.1, bodyX: -0.02, bodyZ: 0.05, rootZ: 0.028, qiX: -0.09, qiY: 0.62, qiZ: 0.26 },
+  { leftArmX: -0.82, leftArmZ: 0.22, rightArmX: -0.76, rightArmZ: -0.18, leftLegX: 0.2, rightLegX: -0.15, bodyX: 0.1, bodyZ: -0.02, rootZ: -0.025, qiX: 0, qiY: 0.56, qiZ: 0.4 },
+  { leftArmX: -0.2, leftArmZ: 0.82, rightArmX: -0.52, rightArmZ: -0.08, leftLegX: -0.04, rightLegX: 0.14, bodyX: -0.07, bodyZ: 0.04, rootZ: 0.035, qiX: 0.11, qiY: 0.5, qiZ: 0.28 },
+  { leftArmX: -0.04, leftArmZ: 0.13, rightArmX: 0.1, rightArmZ: -0.13, leftLegX: 0.04, rightLegX: -0.04, bodyX: 0, bodyZ: 0, rootZ: 0, qiX: 0, qiY: 0.52, qiZ: 0.18 },
+]
+
+function smoothTaiChi(value: number) {
+  const t = THREE.MathUtils.clamp(value, 0, 1)
+  return t * t * (3 - 2 * t)
+}
+
+function sampleTaiChiPose(progress: number): TaiChiPose {
+  const normalized = ((progress % 1) + 1) % 1
+  const scaled = normalized * TAI_CHI_POSES.length
+  const index = Math.floor(scaled) % TAI_CHI_POSES.length
+  const nextIndex = (index + 1) % TAI_CHI_POSES.length
+  const mix = smoothTaiChi(scaled - Math.floor(scaled))
+  const from = TAI_CHI_POSES[index]
+  const to = TAI_CHI_POSES[nextIndex]
+
+  return {
+    leftArmX: THREE.MathUtils.lerp(from.leftArmX, to.leftArmX, mix),
+    leftArmZ: THREE.MathUtils.lerp(from.leftArmZ, to.leftArmZ, mix),
+    rightArmX: THREE.MathUtils.lerp(from.rightArmX, to.rightArmX, mix),
+    rightArmZ: THREE.MathUtils.lerp(from.rightArmZ, to.rightArmZ, mix),
+    leftLegX: THREE.MathUtils.lerp(from.leftLegX, to.leftLegX, mix),
+    rightLegX: THREE.MathUtils.lerp(from.rightLegX, to.rightLegX, mix),
+    bodyX: THREE.MathUtils.lerp(from.bodyX, to.bodyX, mix),
+    bodyZ: THREE.MathUtils.lerp(from.bodyZ, to.bodyZ, mix),
+    rootZ: THREE.MathUtils.lerp(from.rootZ, to.rootZ, mix),
+    qiX: THREE.MathUtils.lerp(from.qiX, to.qiX, mix),
+    qiY: THREE.MathUtils.lerp(from.qiY, to.qiY, mix),
+    qiZ: THREE.MathUtils.lerp(from.qiZ, to.qiZ, mix),
+  }
+}
+
 function VisitorActor({ config }: { config: VisitorConfig }) {
   const rootRef = useRef<THREE.Group>(null)
   const bodyRef = useRef<THREE.Mesh>(null)
@@ -931,9 +984,10 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
     const isRunning = config.action === 'run'
     const isWalking = config.action === 'tour'
     const isTaiChi = config.action === 'tai-chi'
-    const cycleRate = isRunning ? 13 : config.action === 'play' ? 5 : isTaiChi ? 1.2 : 7
+    const cycleRate = isRunning ? 13 : config.action === 'play' ? 5 : isTaiChi ? 0.75 : 7
     const cycle = elapsed * cycleRate + config.phase
     const gait = Math.sin(cycle)
+    const taiChiPose = isTaiChi ? sampleTaiChiPose(elapsed * 0.065 + config.phase * 0.028) : null
     const bounce = isTaiChi
       ? 0.018 + Math.abs(Math.sin(cycle * 0.5)) * 0.018
       : config.action === 'play'
@@ -942,7 +996,7 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
 
     root.position.y = config.groundY + bounce
     root.scale.setScalar(config.scale * (1 + Math.sin(cycle * 0.46 + 0.5) * (config.action === 'observe' ? 0.028 : 0.018)))
-    root.rotation.z = isRunning ? Math.sin(cycle * 0.7) * 0.12 : config.action === 'play' ? Math.sin(cycle * 0.65) * 0.14 : isTaiChi ? Math.sin(cycle * 0.5) * 0.045 : isWalking ? Math.sin(cycle * 0.7) * 0.055 : Math.sin(cycle * 0.45) * 0.04
+    root.rotation.z = isRunning ? Math.sin(cycle * 0.7) * 0.12 : config.action === 'play' ? Math.sin(cycle * 0.65) * 0.14 : isTaiChi && taiChiPose ? taiChiPose.rootZ : isWalking ? Math.sin(cycle * 0.7) * 0.055 : Math.sin(cycle * 0.45) * 0.04
 
     if (motionRingRef.current) {
       const pulse = (Math.sin(cycle * 1.45) + 1) / 2
@@ -969,38 +1023,37 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
     if (leftArmRef.current) leftArmRef.current.rotation.x = -gait * stride * 0.72
     if (rightArmRef.current) rightArmRef.current.rotation.x = gait * stride * 0.72
 
-    if (isTaiChi) {
+    if (isTaiChi && taiChiPose) {
       const breath = Math.sin(cycle * 0.5)
-      const circle = Math.sin(cycle * 0.5 + Math.PI / 2)
-      if (leftLegRef.current) leftLegRef.current.rotation.x = 0.08 + breath * 0.045
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -0.08 - breath * 0.045
+      if (leftLegRef.current) leftLegRef.current.rotation.x = taiChiPose.leftLegX + breath * 0.02
+      if (rightLegRef.current) rightLegRef.current.rotation.x = taiChiPose.rightLegX - breath * 0.02
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.32 - breath * 0.16
-        leftArmRef.current.rotation.z = 0.38 + circle * 0.12
+        leftArmRef.current.rotation.x = taiChiPose.leftArmX + breath * 0.035
+        leftArmRef.current.rotation.z = taiChiPose.leftArmZ
       }
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = 0.44 + breath * 0.16
-        rightArmRef.current.rotation.z = -0.38 - circle * 0.12
+        rightArmRef.current.rotation.x = taiChiPose.rightArmX - breath * 0.035
+        rightArmRef.current.rotation.z = taiChiPose.rightArmZ
       }
       if (qiOrbRef.current) {
-        const qiPulse = 0.92 + (Math.sin(cycle * 0.5 + 0.8) + 1) * 0.1
-        qiOrbRef.current.position.set(0, 0.57 + breath * 0.09, 0.24 + circle * 0.035)
+        const qiPulse = 0.9 + (Math.sin(cycle * 0.5 + 0.8) + 1) * 0.12
+        qiOrbRef.current.position.set(taiChiPose.qiX, taiChiPose.qiY + breath * 0.025, taiChiPose.qiZ)
         qiOrbRef.current.scale.setScalar(qiPulse)
       }
       if (qiHaloRef.current) {
-        qiHaloRef.current.position.set(0, 0.57 + breath * 0.09, 0.24 + circle * 0.035)
-        qiHaloRef.current.rotation.z = cycle * 0.32
-        qiHaloRef.current.scale.setScalar(0.88 + (Math.sin(cycle * 0.5) + 1) * 0.1)
+        qiHaloRef.current.position.set(taiChiPose.qiX, taiChiPose.qiY + breath * 0.025, taiChiPose.qiZ)
+        qiHaloRef.current.rotation.z = cycle * 0.22
+        qiHaloRef.current.scale.setScalar(0.86 + (Math.sin(cycle * 0.5) + 1) * 0.12)
       }
     }
 
     if (bodyRef.current) {
-      bodyRef.current.rotation.x = isRunning ? -0.3 : isWalking ? Math.sin(cycle * 0.7) * 0.06 : 0
-      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.12 : isTaiChi ? Math.sin(cycle * 0.5) * 0.05 : 0
+      bodyRef.current.rotation.x = isTaiChi && taiChiPose ? taiChiPose.bodyX : isRunning ? -0.3 : isWalking ? Math.sin(cycle * 0.7) * 0.06 : 0
+      bodyRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.12 : isTaiChi && taiChiPose ? taiChiPose.bodyZ : 0
     }
     if (headRef.current) {
-      headRef.current.rotation.y = config.action === 'observe' ? Math.sin(cycle * 0.25) * 0.32 : isWalking ? Math.sin(cycle * 0.42) * 0.14 : 0
-      headRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.08 : 0
+      headRef.current.rotation.y = config.action === 'observe' ? Math.sin(cycle * 0.25) * 0.32 : isWalking ? Math.sin(cycle * 0.42) * 0.14 : isTaiChi ? Math.sin(cycle * 0.4) * 0.11 : 0
+      headRef.current.rotation.z = config.action === 'play' ? Math.sin(cycle * 0.65) * 0.08 : isTaiChi ? Math.sin(cycle * 0.5) * 0.04 : 0
     }
 
     if (config.action === 'play') {
@@ -1171,11 +1224,19 @@ function VisitorActor({ config }: { config: VisitorConfig }) {
           <boxGeometry args={[0.065, 0.28, 0.065]} />
           <meshStandardMaterial color={palette.coat} roughness={0.82} />
         </mesh>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.3, 0]}>
+          <sphereGeometry args={[0.055, 8, 6]} />
+          <meshStandardMaterial color={palette.skin} roughness={0.88} />
+        </mesh>
       </group>
       <group ref={rightArmRef} position={[0.17, 0.61, 0]}>
         <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.14, 0]}>
           <boxGeometry args={[0.065, 0.28, 0.065]} />
           <meshStandardMaterial color={palette.coat} roughness={0.82} />
+        </mesh>
+        <mesh raycast={NO_RAYCAST} castShadow position={[0, -0.3, 0]}>
+          <sphereGeometry args={[0.055, 8, 6]} />
+          <meshStandardMaterial color={palette.skin} roughness={0.88} />
         </mesh>
       </group>
 
