@@ -511,6 +511,7 @@ export default function App() {
             onHover={setHovered}
             onResetView={handleResetView}
             language={language}
+            soundEnabled={soundEnabled}
             timeOfDay={timeOfDay}
             season={season}
             onReady={handleSceneReady}

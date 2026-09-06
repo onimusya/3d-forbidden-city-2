@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Html, Line, useGLTF } from "@react-three/drei"
 import * as THREE from "three"
+import { AnimalsLayer } from './AnimalsLayer'
 import { SCENE_LANDMARKS, type SceneLandmark } from './landmarkData'
 import {
   Atmosphere,
@@ -32,6 +33,7 @@ export type ForbiddenCityWorldProps = {
   activeRouteStopId?: string | null
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
+  soundEnabled?: boolean
   timeOfDay?: "day" | "night"
   season?: SceneSeason
   onReady?: () => void
@@ -1764,7 +1766,7 @@ function VisitorsLayer({ timeOfDay }: { timeOfDay: "day" | "night" }) {
   )
 }
 
-export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, routeStopIds, activeRouteStopId, onSelect, onHover, timeOfDay = "day", season = "summer", onReady }: ForbiddenCityWorldProps) {
+export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, routeStopIds, activeRouteStopId, onSelect, onHover, soundEnabled = true, timeOfDay = "day", season = "summer", onReady }: ForbiddenCityWorldProps) {
   return (
     <SeasonThemeProvider season={season}>
       <group>
@@ -1772,6 +1774,7 @@ export function ForbiddenCityWorld({ selectedId, hoveredId, discoveredIds, route
         <ForbiddenCityModel onReady={onReady} season={season} />
       </Suspense>
       <VisitorsLayer timeOfDay={timeOfDay} />
+      <AnimalsLayer soundEnabled={soundEnabled} />
       <ProcessionPath landmarks={SCENE_LANDMARKS} stopIds={routeStopIds ?? []} activeStopId={activeRouteStopId ?? null} />
       <LandmarkLayer
         landmarks={SCENE_LANDMARKS}

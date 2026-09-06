@@ -17,6 +17,7 @@ export type MapSceneProps = {
   onResetView?: () => void
   resetViewSignal?: number
   language?: 'en' | 'zh'
+  soundEnabled?: boolean
   timeOfDay?: 'day' | 'night'
   season?: SceneSeason
   onReady?: () => void
@@ -457,7 +458,7 @@ function SceneControls({ selectedId, onResetView, resetViewSignal, language = 'e
   )
 }
 
-export function MapScene({ selectedId, hoveredId, discoveredIds, routeStopIds, activeRouteStopId, onSelect, onHover, onResetView, resetViewSignal, language = 'en', timeOfDay = 'day', season = 'summer', onReady }: MapSceneProps) {
+export function MapScene({ selectedId, hoveredId, discoveredIds, routeStopIds, activeRouteStopId, onSelect, onHover, onResetView, resetViewSignal, language = 'en', soundEnabled = true, timeOfDay = 'day', season = 'summer', onReady }: MapSceneProps) {
   return (
     <Canvas
       orthographic
@@ -482,6 +483,7 @@ export function MapScene({ selectedId, hoveredId, discoveredIds, routeStopIds, a
         onSelect={onSelect}
         onHover={onHover}
         onReady={onReady}
+        soundEnabled={soundEnabled}
         timeOfDay={timeOfDay}
         season={season}
       />
