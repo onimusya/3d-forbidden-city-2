@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react"
-import { BadgeCheck, Check, Compass, Moon, Route, Sun, X } from "lucide-react"
+import { BadgeCheck, Check, Compass, Moon, Route, Share2, Sun, X } from "lucide-react"
 
 import type { Season, TimeOfDay } from "../store/atlasStore"
 import "./overlay.css"
@@ -50,6 +50,7 @@ export interface DiscoveryJournalProps {
   routes: readonly JournalRoute[]
   onClose: () => void
   onSelectLandmark: (id: string) => void
+  onOpenRoutePostcard?: (id: string) => void
 }
 
 const SEASON_LABELS: Record<Season, { en: string; zh: string }> = {
@@ -85,7 +86,7 @@ function MomentStamp({ landmark, language }: { landmark: JournalLandmark; langua
   )
 }
 
-export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose, onSelectLandmark }: DiscoveryJournalProps) {
+export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose, onSelectLandmark, onOpenRoutePostcard }: DiscoveryJournalProps) {
   const titleId = useId()
   const dialogRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -237,6 +238,13 @@ export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose,
                       <div className="journal-route-card__footer">
                         {route.completed ? <><span>{isChinese ? "已完成" : "Completed"}</span><small>{formatRouteMoment(route, language)}</small></> : isInProgress ? <><span>{isChinese ? "进行中" : "In progress"}</span><small>{isChinese ? "第 " + ((route.progressIndex ?? 0) + 1) + " 站已保存 · 打开游线继续" : "Stop " + ((route.progressIndex ?? 0) + 1) + " saved · Open Processions to continue"}</small></> : <><span>{isChinese ? "可开始" : "Ready to walk"}</span><small>{isChinese ? "打开游线开始行进" : "Open Processions to begin"}</small></>}
                       </div>
+                      {route.completed && onOpenRoutePostcard ? (
+                        <button className="journal-route-card__postcard" type="button" onClick={() => onOpenRoutePostcard(route.id)}>
+                          <Share2 size={13} strokeWidth={1.6} aria-hidden="true" />
+                          <span>{isChinese ? "制作游线明信片" : "Make trail postcard"}</span>
+                          <span aria-hidden="true">↗</span>
+                        </button>
+                      ) : null}
                     </article>
                   )
                 })}

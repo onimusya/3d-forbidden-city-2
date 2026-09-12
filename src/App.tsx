@@ -5,6 +5,7 @@ import { AtlasHero } from "./components/AtlasHero"
 import { AtlasPreloader } from "./components/AtlasPreloader"
 import { DiscoveryJournal, type JournalLandmark, type JournalRoute } from "./components/DiscoveryJournal"
 import { DiscoveryRail, type DiscoveryLandmark } from "./components/DiscoveryRail"
+import { createPostcardUrl, FieldPostcard, parsePostcardRequest, type FieldPostcardTarget, type PostcardRequest } from "./components/FieldPostcard"
 import { InteractionHint } from "./components/InteractionHint"
 import { ProgressPage } from "./components/ProgressPage"
 import { SiteInspector } from "./components/SiteInspector"
@@ -67,6 +68,7 @@ const PROGRESS_HISTORY_ZH = [
   { label: "当前迭代 · 导览成形", summary: "三条策划游线把故宫变成一段可跟随的路线，镜头、地图与探索笔记保持同步。" },
   { label: "记忆落地", summary: "地标印记与游线徽章会被保存，让每次漫游都能成为下一次探索的线索。" },
   { label: "当前迭代 · 游线回声", summary: "探索游线会在抵达时收集印记，也会记住未完成的故事，等你下次继续。" },
+  { label: "把这一刻带走", summary: "地标印记与完成的游线现在可以变成明信片，分享、下载，或通过链接重新打开。" },
 ] as const
 
 function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], language: 'en' | 'zh'): DiscoveryLandmark {
@@ -304,6 +306,7 @@ export default function App() {
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null)
   const [routeStopIndex, setRouteStopIndex] = useState(0)
   const [journalOpen, setJournalOpen] = useState(false)
+  const [postcardRequest, setPostcardRequest] = useState<PostcardRequest | null>(() => parsePostcardRequest())
   const {
     selectedId,
     hoveredId,
@@ -397,6 +400,60 @@ export default function App() {
       timeOfDay: completion?.timeOfDay,
     }
   }), [completedRoutes, routeProgress])
+  const postcardTarget = useMemo<FieldPostcardTarget | null>(() => {
+    if (!postcardRequest) return null
+    if (postcardRequest.kind === "landmark") {
+      const landmark = LANDMARKS.find((candidate) => candidate.id === postcardRequest.id)
+      if (!landmark) return null
+      const localized = LANDMARK_COPY_ZH[landmark.id]
+      const artifact = JOURNAL_ARTIFACTS[landmark.id]
+      const record = discoveryRecords.find((candidate) => candidate.id === landmark.id)
+      return {
+        kind: "landmark",
+        id: landmark.id,
+        title: landmark.title,
+        chineseName: landmark.chineseName,
+        category: landmark.category,
+        categoryZh: localized.category,
+        era: landmark.era,
+        eraZh: localized.era,
+        description: landmark.description,
+        descriptionZh: localized.description,
+        artifact: artifact.artifact,
+        artifactZh: artifact.artifactZh,
+        artifactNote: artifact.note,
+        artifactNoteZh: artifact.noteZh,
+        discoveredAt: record?.discoveredAt,
+        season: postcardRequest.season,
+        timeOfDay: postcardRequest.timeOfDay,
+      }
+    }
+
+    const route = PROCESSION_ROUTES.find((candidate) => candidate.id === postcardRequest.id)
+    if (!route) return null
+    const completion = completedRoutes.find((candidate) => candidate.routeId === route.id)
+    const stops = route.stops
+      .map((id) => LANDMARKS.find((landmark) => landmark.id === id))
+      .filter((landmark): landmark is Landmark => Boolean(landmark))
+      .map((landmark) => ({ id: landmark.id, title: landmark.title, chineseName: landmark.chineseName }))
+    return {
+      kind: "route",
+      id: route.id,
+      title: route.title,
+      titleZh: route.titleZh,
+      trail: route.trail,
+      trailZh: route.trailZh,
+      description: route.description,
+      descriptionZh: route.descriptionZh,
+      reward: route.reward,
+      rewardZh: route.rewardZh,
+      stops,
+      completedAt: completion?.completedAt,
+      season: postcardRequest.season,
+      timeOfDay: postcardRequest.timeOfDay,
+    }
+  }, [completedRoutes, discoveryRecords, postcardRequest])
+  const postcardUrl = useMemo(() => postcardRequest ? createPostcardUrl(postcardRequest) : undefined, [postcardRequest])
   const progressHistory = useMemo(
     () => PROGRESS_HISTORY.map((entry, index) => ({
       id: entry.id,
@@ -425,6 +482,12 @@ export default function App() {
     }, shellRef)
     return () => context.revert()
   }, [selectedId])
+
+  useEffect(() => {
+    const handleHistoryChange = () => setPostcardRequest(parsePostcardRequest())
+    window.addEventListener("popstate", handleHistoryChange)
+    return () => window.removeEventListener("popstate", handleHistoryChange)
+  }, [])
 
   const handleTrailArrival = (id: string) => {
     if (!discover(id, { season, timeOfDay })) return
@@ -528,8 +591,42 @@ export default function App() {
     handleSelect(id)
   }
 
-  const handleLanguageChange = (nextLanguage: AtlasLanguage) => {
-    playSfx('select')
+  const handleOpenPostcard = (request: PostcardRequest) => {
+    window.history.replaceState({}, "", createPostcardUrl(request))
+    setPostcardRequest(request)
+    setRoutePickerOpen(false)
+    setJournalOpen(false)
+    setProgressOpen(false)
+    setHelpVisible(false)
+  }
+
+  const handleOpenLandmarkPostcard = (id: string) => {
+    const record = discoveryRecords.find((candidate) => candidate.id === id)
+    handleOpenPostcard({
+      kind: "landmark",
+      id,
+      season: record?.season ?? season,
+      timeOfDay: record?.timeOfDay ?? timeOfDay,
+    })
+  }
+
+  const handleOpenRoutePostcard = (routeId: string) => {
+    const completion = completedRoutes.find((candidate) => candidate.routeId === routeId)
+    if (!completion) return
+    handleOpenPostcard({ kind: "route", id: routeId, season: completion.season, timeOfDay: completion.timeOfDay })
+  }
+
+  const handleClosePostcard = () => {
+    setPostcardRequest(null)
+    const url = new URL(window.location.href)
+    url.searchParams.delete("postcard")
+    url.searchParams.delete("id")
+    url.searchParams.delete("season")
+    url.searchParams.delete("time")
+    window.history.replaceState({}, "", url.toString())
+  }
+
+  const handleLanguageChange = (nextLanguage: AtlasLanguage) => {    playSfx('select')
     setLanguage(nextLanguage === "EN" ? "en" : "zh")
   }
 
@@ -706,6 +803,7 @@ export default function App() {
             language={language}
             onClose={handleCloseInspector}
             onDiscover={(landmark) => handleDiscover(landmark.id)}
+            onPostcard={(landmark) => handleOpenLandmarkPostcard(landmark.id)}
           />
         )}
       </div>
@@ -719,7 +817,10 @@ export default function App() {
         routes={journalRoutes}
         onClose={() => setJournalOpen(false)}
         onSelectLandmark={handleJournalLandmarkSelect}
+        onOpenRoutePostcard={handleOpenRoutePostcard}
       />
+
+      <FieldPostcard isOpen={Boolean(postcardRequest && postcardTarget)} target={postcardTarget} language={language} shareUrl={postcardUrl} onClose={handleClosePostcard} />
 
       <ProgressPage
         isOpen={progressOpen}
@@ -727,7 +828,7 @@ export default function App() {
         history={progressHistory}
         currentRound={PROGRESS_HISTORY.at(-1)?.round ?? 1}
         language={language}
-        remainingGaps={language === 'zh' ? ['把一枚图鉴印记分享给同行者。', '继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为完成的游线印记建立更丰富的视觉档案。'] : ['Share a field journal moment with someone else.', 'Tune low-power WebGL framing and texture memory.', 'Give completed trail seals a richer visual archive.']}
+        remainingGaps={language === 'zh' ? ['继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为完成的游线印记建立更丰富的视觉档案。', '为分享的时刻建立公开图鉴画廊。'] : ['Tune low-power WebGL framing and texture memory.', 'Give completed trail seals a richer visual archive.', 'Add a public gallery for shared moments.']}
       />
 
       {toast && (

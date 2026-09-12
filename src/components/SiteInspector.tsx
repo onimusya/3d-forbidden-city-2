@@ -1,5 +1,5 @@
 import { useEffect, useId } from "react"
-import { Check, MapPin, Sparkles, X } from "lucide-react"
+import { Check, MapPin, Share2, Sparkles, X } from "lucide-react"
 
 import "./overlay.css"
 
@@ -29,6 +29,7 @@ export interface SiteInspectorProps {
   language?: InspectorLanguage
   onClose: () => void
   onDiscover?: (landmark: Landmark) => void
+  onPostcard?: (landmark: Landmark) => void
   isDiscovering?: boolean
 }
 
@@ -38,6 +39,7 @@ export function SiteInspector({
   language = "en",
   onClose,
   onDiscover,
+  onPostcard,
   isDiscovering = false,
 }: SiteInspectorProps) {
   const titleId = useId()
@@ -142,6 +144,13 @@ export function SiteInspector({
         </span>
         {!discovered && !isDiscovering ? <span aria-hidden="true">↗</span> : null}
       </button>
+      {discovered && onPostcard ? (
+        <button className="postcard-button" type="button" onClick={() => onPostcard(landmark)}>
+          <Share2 size={14} strokeWidth={1.6} aria-hidden="true" />
+          <span>{isChinese ? "制作现场明信片" : "Make a field postcard"}</span>
+          <span aria-hidden="true">↗</span>
+        </button>
+      ) : null}
     </aside>
   )
 }
