@@ -2425,6 +2425,21 @@
   line-height: 1.55;
 }
 
+.procession-panel__progress {
+  height: 2px;
+  margin-top: 15px;
+  overflow: hidden;
+  background: rgba(225, 224, 205, 0.12);
+}
+
+.procession-panel__progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--atlas-vermilion), var(--atlas-gold-light));
+  box-shadow: 0 0 12px rgba(226, 174, 83, 0.45);
+  transition: width 420ms cubic-bezier(.2, .75, .25, 1);
+}
+
 .procession-panel__stops {
   display: flex;
   gap: 5px;
@@ -2508,6 +2523,44 @@
   color: var(--atlas-dim);
   font-family: var(--atlas-serif);
   font-size: 0.77rem;
+}
+
+.procession-panel__cue {
+  margin-top: 14px;
+  padding-top: 11px;
+  border-top: 1px solid var(--atlas-line);
+}
+
+.procession-panel__cue .micro,
+.procession-panel__reward .micro {
+  color: var(--atlas-gold-light);
+  font-size: 0.49rem;
+}
+
+.procession-panel__cue p {
+  margin: 6px 0 0;
+  color: var(--atlas-muted);
+  font-family: var(--atlas-serif);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.procession-panel__reward {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.procession-panel__reward strong {
+  overflow: hidden;
+  color: var(--atlas-teal);
+  font-family: var(--atlas-serif);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .procession-panel__controls {
@@ -2618,10 +2671,74 @@
   line-height: 1.65;
 }
 
+.route-resume {
+  display: grid;
+  grid-template-columns: 9px 1fr 18px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-top: 21px;
+  padding: 12px 13px;
+  border: 1px solid rgba(134, 181, 163, 0.42);
+  color: var(--atlas-paper);
+  background: linear-gradient(110deg, rgba(134, 181, 163, 0.13), rgba(226, 174, 83, 0.07));
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.route-resume:hover {
+  border-color: var(--atlas-teal);
+  background: linear-gradient(110deg, rgba(134, 181, 163, 0.2), rgba(226, 174, 83, 0.1));
+  transform: translateY(-2px);
+}
+
+.route-resume > svg {
+  color: var(--atlas-gold-light);
+}
+
+.route-resume__mark {
+  display: block;
+  width: 7px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--atlas-teal), var(--atlas-gold));
+  box-shadow: 0 0 12px rgba(134, 181, 163, 0.38);
+}
+
+.route-resume__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.route-resume__eyebrow {
+  color: var(--atlas-teal);
+  font-size: 0.48rem;
+}
+
+.route-resume__body strong {
+  overflow: hidden;
+  color: var(--atlas-ink);
+  font-family: var(--atlas-serif);
+  font-size: 1rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-resume__body > span:last-child {
+  overflow: hidden;
+  color: var(--atlas-muted);
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .route-picker__list {
   display: grid;
   gap: 8px;
-  margin-top: 26px;
+  margin-top: 18px;
 }
 
 .route-option {
@@ -2768,6 +2885,27 @@
     margin-top: 10px;
   }
 
+  .procession-panel__progress {
+    margin-top: 10px;
+  }
+
+  .procession-panel__cue {
+    margin-top: 10px;
+    padding-top: 9px;
+  }
+
+  .procession-panel__cue p {
+    display: -webkit-box;
+    margin-top: 4px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .procession-panel__reward {
+    display: none;
+  }
+
   .route-picker-layer {
     padding: 10px;
   }
@@ -2787,6 +2925,11 @@
 
   .route-picker__header p {
     font-size: 0.67rem;
+  }
+
+  .route-resume {
+    margin-top: 16px;
+    padding: 10px 9px;
   }
 
   .route-picker__list {
@@ -3371,6 +3514,11 @@
 .journal-route-card.is-completed {
   border-color: rgba(226, 174, 83, 0.44);
   background: linear-gradient(145deg, rgba(226, 174, 83, 0.09), rgba(255, 255, 255, 0.018));
+}
+
+.journal-route-card.is-in-progress {
+  border-color: rgba(134, 181, 163, 0.44);
+  background: linear-gradient(145deg, rgba(134, 181, 163, 0.1), rgba(255, 255, 255, 0.018));
 }
 
 .journal-route-card__topline {

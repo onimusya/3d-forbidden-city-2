@@ -14,7 +14,7 @@ import { LANDMARKS } from "./data/landmarks"
 import { PROGRESS_HISTORY } from "./data/progress"
 import { copy } from "./lib/i18n"
 import { useAtlasAudio } from "./lib/useAtlasAudio"
-import { useAtlasStore, type DiscoveryRecord, type RouteCompletion } from "./store/atlasStore"
+import { useAtlasStore, type DiscoveryRecord, type RouteCompletion, type RouteProgress } from "./store/atlasStore"
 
 const MapScene = lazy(() => import("./components/MapScene"))
 
@@ -65,7 +65,8 @@ const PROGRESS_HISTORY_ZH = [
   { label: '当前迭代 · 克制自信', summary: '内容层已准备好，为双语故宫图鉴提供可漫游的骨架。' },
   { label: '让地标成为现场', summary: '点击地标后，镜头进入更近的等距现场，游线与详情保持在同一段体验里。' },
   { label: "当前迭代 · 导览成形", summary: "三条策划游线把故宫变成一段可跟随的路线，镜头、地图与探索笔记保持同步。" },
-  { label: "当前迭代 · 记忆落地", summary: "地标印记与游线徽章会被保存，让每次漫游都能成为下一次探索的线索。" },
+  { label: "记忆落地", summary: "地标印记与游线徽章会被保存，让每次漫游都能成为下一次探索的线索。" },
+  { label: "当前迭代 · 游线回声", summary: "探索游线会在抵达时收集印记，也会记住未完成的故事，等你下次继续。" },
 ] as const
 
 function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], language: 'en' | 'zh'): DiscoveryLandmark {
@@ -85,8 +86,14 @@ type ProcessionRoute = {
   id: string
   title: string
   titleZh: string
+  trail: string
+  trailZh: string
   description: string
   descriptionZh: string
+  cue: string
+  cueZh: string
+  reward: string
+  rewardZh: string
   stops: readonly string[]
 }
 
@@ -95,53 +102,101 @@ const PROCESSION_ROUTES: readonly ProcessionRoute[] = [
     id: "southern-axis",
     title: "The Southern Axis",
     titleZh: "南向中轴",
+    trail: "CEREMONY / PUBLIC COURT",
+    trailZh: "典礼 / 外朝",
     description: "Pass from the ceremonial gate through the Three Great Halls, following the city’s public sequence.",
     descriptionZh: "从礼仪性的午门出发，穿过三大殿，沿着城市的公共序列向北行进。",
+    cue: "Follow the rising roofs; the city gets more ceremonial at every stop.",
+    cueZh: "沿着逐级升起的屋顶前进，每一站都更接近典礼的核心。",
+    reward: "Three-Tier Ceremony",
+    rewardZh: "三台典礼印",
     stops: ["meridian-gate", "gate-of-supreme-harmony", "hall-of-supreme-harmony", "hall-of-central-harmony", "hall-of-preserving-harmony"],
   },
   {
     id: "inner-court",
     title: "The Inner Court",
     titleZh: "内廷深处",
+    trail: "RESIDENCE / INNER COURT",
+    trailZh: "居所 / 内廷",
     description: "Leave public ceremony behind and move through the residences, symbols, and garden at the northern end.",
     descriptionZh: "离开公开的典礼空间，走进北端的居所、象征与园林。",
+    cue: "Cross the gate and let the scale quieten: this is the court behind ceremony.",
+    cueZh: "跨过宫门，让尺度安静下来：这里是典礼背后的帝王家宅。",
+    reward: "Inner Court Key",
+    rewardZh: "内廷钥印",
     stops: ["gate-of-heavenly-purity", "palace-of-heavenly-purity", "hall-of-union", "palace-of-earthly-tranquility", "imperial-garden"],
   },
   {
     id: "living-flanks",
     title: "The Living Flanks",
     titleZh: "东西侧院",
+    trail: "WORK / SCHOLARSHIP",
+    trailZh: "政务 / 文脉",
     description: "Read the court from its working edges: scholarship, administration, and the quiet garden threshold.",
     descriptionZh: "从宫苑的工作边缘阅读故宫：文脉、政务与通往园林的静谧门槛。",
+    cue: "Step off the central axis to find the daily machinery behind imperial spectacle.",
+    cueZh: "离开中轴线，去寻找帝国盛典背后的日常政务与文脉。",
+    reward: "Daily Court",
+    rewardZh: "日常宫廷印",
     stops: ["hall-of-mental-cultivation", "hall-of-supreme-harmony", "hall-of-literary-brilliance", "imperial-garden"],
+  },
+  {
+    id: "garden-after-dark",
+    title: "The Garden After Dark",
+    titleZh: "夜游御园",
+    trail: "NIGHT / LIVING GARDENS",
+    trailZh: "夜色 / 活的园林",
+    description: "Trace the northern gardens after dusk, where the map’s quiet edges begin to move.",
+    descriptionZh: "黄昏之后沿着北侧园林行进，让地图安静的边缘开始活动起来。",
+    cue: "Switch to night before you begin; listen for the city’s smaller, stranger life.",
+    cueZh: "开始前切换到夜晚，听见这座城更细小、更奇异的生命。",
+    reward: "Cypress Shadow",
+    rewardZh: "柏影印",
+    stops: ["imperial-garden", "palace-of-earthly-tranquility", "hall-of-literary-brilliance", "hall-of-mental-cultivation"],
   },
 ]
 
 type ProcessionPickerProps = {
   isOpen: boolean
   language: "en" | "zh"
+  routeProgress: RouteProgress | null
   onClose: () => void
   onStart: (routeId: string) => void
+  onResume: () => void
 }
 
-function ProcessionPicker({ isOpen, language, onClose, onStart }: ProcessionPickerProps) {
+function ProcessionPicker({ isOpen, language, routeProgress, onClose, onStart, onResume }: ProcessionPickerProps) {
   if (!isOpen) return null
 
   const isChinese = language === "zh"
+  const resumeRoute = routeProgress ? PROCESSION_ROUTES.find((route) => route.id === routeProgress.routeId) ?? null : null
+  const resumeIndex = resumeRoute ? Math.min(routeProgress?.stopIndex ?? 0, resumeRoute.stops.length - 1) : 0
+  const resumeStop = resumeRoute ? LANDMARKS.find((landmark) => landmark.id === resumeRoute.stops[resumeIndex]) : null
   return (
     <div className="route-picker-layer">
       <button className="route-picker-backdrop" type="button" aria-label={isChinese ? "关闭游线选择" : "Close procession picker"} onClick={onClose} />
       <section className="route-picker glass-panel" role="dialog" aria-modal="true" aria-labelledby="procession-picker-title">
         <div className="route-picker__header">
           <div>
-            <span className="micro route-picker__eyebrow">{isChinese ? "考察方法 / 02" : "Field method / 02"}</span>
-            <h2 className="display-serif" id="procession-picker-title">{isChinese ? "选择一条游线。" : "Choose a procession."}</h2>
-            <p>{isChinese ? "让镜头沿着故宫的空间秩序移动，每一站都保留一段可以停驻的故事。" : "Let the camera follow the city’s spatial order. Each stop keeps a story worth pausing for."}</p>
+            <span className="micro route-picker__eyebrow">{isChinese ? "探索游线 / 02" : "Field trails / 02"}</span>
+            <h2 className="display-serif" id="procession-picker-title">{isChinese ? "选择一条探索游线。" : "Choose a field trail."}</h2>
+            <p>{isChinese ? "让镜头沿着故宫的空间秩序移动，每一站都留下印记，完成后成为你的图鉴徽章。" : "Let the camera follow the city’s spatial order. Each stop leaves a seal; a completed trail becomes an atlas badge."}</p>
           </div>
           <button className="icon-button" type="button" aria-label={isChinese ? "关闭游线选择" : "Close procession picker"} onClick={onClose}>
             <X size={17} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
+        {resumeRoute && resumeStop && (
+          <button className="route-resume" type="button" aria-label={(isChinese ? "继续 " : "Continue ") + (isChinese ? resumeRoute.titleZh : resumeRoute.title)} onClick={onResume}>
+            <span className="route-resume__mark" aria-hidden="true" />
+            <span className="route-resume__body">
+              <span className="route-resume__eyebrow micro">{isChinese ? "未完的故事" : "Unfinished story"}</span>
+              <strong>{isChinese ? resumeRoute.titleZh : resumeRoute.title}</strong>
+              <span>{isChinese ? `从第 ${resumeIndex + 1} 站继续 · ${resumeStop.chineseName}` : `Continue at stop ${resumeIndex + 1} · ${resumeStop.title}`}</span>
+            </span>
+            <ChevronRight size={18} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        )}
         <div className="route-picker__list">
           {PROCESSION_ROUTES.map((route, index) => {
             const stops = route.stops.map((id) => LANDMARKS.find((landmark) => landmark.id === id)).filter((landmark): landmark is Landmark => Boolean(landmark))
@@ -150,7 +205,7 @@ function ProcessionPicker({ isOpen, language, onClose, onStart }: ProcessionPick
               <button className="route-option" key={route.id} type="button" data-testid={"route-option-" + route.id} aria-label={(isChinese ? "开始游览 " : "Start ") + title} onClick={() => onStart(route.id)}>
                 <span className="route-option__index micro">{String(index + 1).padStart(2, "0")}</span>
                 <span className="route-option__body">
-                  <span className="route-option__meta micro"><Navigation size={12} strokeWidth={1.6} aria-hidden="true" /> {stops.length} {isChinese ? "站" : "stops"}</span>
+                  <span className="route-option__meta micro"><Navigation size={12} strokeWidth={1.6} aria-hidden="true" /> {isChinese ? route.trailZh : route.trail} · {stops.length} {isChinese ? "站" : "stops"}</span>
                   <strong>{title}</strong>
                   <span className="route-option__description">{isChinese ? route.descriptionZh : route.description}</span>
                   <span className="route-option__stops">
@@ -164,7 +219,7 @@ function ProcessionPicker({ isOpen, language, onClose, onStart }: ProcessionPick
         </div>
         <div className="route-picker__footer">
           <Compass size={14} strokeWidth={1.5} aria-hidden="true" />
-          <span>{isChinese ? "可随时退出游线，继续自由漫游。" : "Exit any time and return to free exploration."}</span>
+          <span>{isChinese ? "可随时退出游线；未完成的故事会留在档案里。" : "Exit any time; unfinished stories stay in the archive."}</span>
         </div>
       </section>
     </div>
@@ -185,6 +240,7 @@ function ProcessionPanel({ route, stopIndex, language, onStopSelect, onPrevious,
   const isChinese = language === "zh"
   const stops = route.stops.map((id) => LANDMARKS.find((landmark) => landmark.id === id)).filter((landmark): landmark is Landmark => Boolean(landmark))
   const current = stops[Math.min(stopIndex, Math.max(0, stops.length - 1))]
+  const progressPercent = stops.length ? ((stopIndex + 1) / stops.length) * 100 : 0
   if (!current) return null
 
   return (
@@ -196,11 +252,14 @@ function ProcessionPanel({ route, stopIndex, language, onStopSelect, onPrevious,
         </button>
       </div>
       <div className="procession-panel__heading">
-        <span className="procession-panel__route-label"><Navigation size={13} strokeWidth={1.6} aria-hidden="true" /> <span className="micro">{isChinese ? "帝国行进" : "Imperial procession"}</span></span>
+        <span className="procession-panel__route-label"><Navigation size={13} strokeWidth={1.6} aria-hidden="true" /> <span className="micro">{isChinese ? route.trailZh : route.trail}</span></span>
         <span className="procession-panel__count micro">{String(stopIndex + 1).padStart(2, "0")} / {String(stops.length).padStart(2, "0")}</span>
       </div>
       <h2 className="display-serif" id="procession-panel-title">{isChinese ? route.titleZh : route.title}</h2>
       <p className="procession-panel__description">{isChinese ? route.descriptionZh : route.description}</p>
+      <div className="procession-panel__progress" role="progressbar" aria-label={isChinese ? "游线进度" : "Trail progress"} aria-valuemin={0} aria-valuemax={stops.length} aria-valuenow={stopIndex + 1}>
+        <span style={{ width: progressPercent + "%" }} />
+      </div>
       <div className="procession-panel__stops" role="list" aria-label={isChinese ? "游线站点" : "Procession stops"}>
         {stops.map((stop, index) => (
           <button className={"procession-stop" + (index === stopIndex ? " is-active" : "")} key={stop.id} type="button" role="listitem" aria-current={index === stopIndex ? "step" : undefined} aria-label={(isChinese ? "前往 " : "Go to ") + (isChinese ? stop.chineseName : stop.title)} onClick={() => onStopSelect(index)}>
@@ -213,6 +272,14 @@ function ProcessionPanel({ route, stopIndex, language, onStopSelect, onPrevious,
         <span className="micro">{isChinese ? "当前站点" : "Current stop"}</span>
         <strong>{isChinese ? current.chineseName : current.title}</strong>
         <span>{isChinese ? current.title : current.chineseName}</span>
+      </div>
+      <div className="procession-panel__cue">
+        <span className="micro">{isChinese ? "现场提示" : "Field cue"}</span>
+        <p>{isChinese ? route.cueZh : route.cue}</p>
+      </div>
+      <div className="procession-panel__reward">
+        <span className="micro">{isChinese ? "完成后获得" : "Trail seal"}</span>
+        <strong>{isChinese ? route.rewardZh : route.reward}</strong>
       </div>
       <div className="procession-panel__controls">
         <button className="procession-panel__previous" type="button" disabled={stopIndex === 0} aria-label={isChinese ? "上一站" : "Previous stop"} onClick={onPrevious}>
@@ -243,6 +310,7 @@ export default function App() {
     discoveredIds,
     discoveryRecords,
     completedRoutes,
+    routeProgress,
     language,
     progressOpen,
     helpVisible,
@@ -254,6 +322,7 @@ export default function App() {
     setHovered,
     discover,
     completeRoute,
+    setRouteProgress,
     setLanguage,
     setProgressOpen,
     setHelpVisible,
@@ -322,11 +391,12 @@ export default function App() {
       titleZh: route.titleZh,
       stops,
       completed: Boolean(completion),
+      progressIndex: routeProgress?.routeId === route.id ? routeProgress.stopIndex : undefined,
       completedAt: completion?.completedAt,
       season: completion?.season,
       timeOfDay: completion?.timeOfDay,
     }
-  }), [completedRoutes])
+  }), [completedRoutes, routeProgress])
   const progressHistory = useMemo(
     () => PROGRESS_HISTORY.map((entry, index) => ({
       id: entry.id,
@@ -356,12 +426,24 @@ export default function App() {
     return () => context.revert()
   }, [selectedId])
 
+  const handleTrailArrival = (id: string) => {
+    if (!discover(id, { season, timeOfDay })) return
+    const landmark = LANDMARKS.find((candidate) => candidate.id === id)
+    if (!landmark) return
+    playSfx("discover")
+    setToast(language === "en" ? "Trail seal collected · " + landmark.title : "游线印记已收集 · " + landmark.chineseName)
+    window.setTimeout(() => setToast(null), 2400)
+  }
+
   const handleSelect = (id: string) => {
     playSfx("open")
     if (activeRoute) {
       const nextStopIndex = activeRoute.stops.indexOf(id)
-      if (nextStopIndex >= 0) setRouteStopIndex(nextStopIndex)
-      else {
+      if (nextStopIndex >= 0) {
+        setRouteStopIndex(nextStopIndex)
+        setRouteProgress({ routeId: activeRoute.id, stopIndex: nextStopIndex })
+        handleTrailArrival(id)
+      } else {
         setActiveRouteId(null)
         setRouteStopIndex(0)
       }
@@ -377,15 +459,35 @@ export default function App() {
     setJournalOpen(false)
     setActiveRouteId(route.id)
     setRouteStopIndex(0)
+    setRouteProgress({ routeId: route.id, stopIndex: 0 })
     setHelpVisible(false)
     setSelected(route.stops[0])
+    handleTrailArrival(route.stops[0])
+  }
+
+  const handleResumeRoute = () => {
+    if (!routeProgress) return
+    const route = PROCESSION_ROUTES.find((candidate) => candidate.id === routeProgress.routeId)
+    if (!route || !route.stops.length) return
+    const stopIndex = Math.min(Math.max(routeProgress.stopIndex, 0), route.stops.length - 1)
+    playSfx("open")
+    setRoutePickerOpen(false)
+    setJournalOpen(false)
+    setActiveRouteId(route.id)
+    setRouteStopIndex(stopIndex)
+    setRouteProgress({ routeId: route.id, stopIndex })
+    setHelpVisible(false)
+    setSelected(route.stops[stopIndex])
+    handleTrailArrival(route.stops[stopIndex])
   }
 
   const handleRouteStop = (nextStopIndex: number) => {
     if (!activeRoute || nextStopIndex < 0 || nextStopIndex >= activeRoute.stops.length) return
     playSfx("select")
     setRouteStopIndex(nextStopIndex)
+    setRouteProgress({ routeId: activeRoute.id, stopIndex: nextStopIndex })
     setSelected(activeRoute.stops[nextStopIndex])
+    handleTrailArrival(activeRoute.stops[nextStopIndex])
   }
 
   const handleExitRoute = () => {
@@ -401,7 +503,8 @@ export default function App() {
     if (routeStopIndex >= activeRoute.stops.length - 1) {
       playSfx("discover")
       completeRoute(activeRoute.id, { season, timeOfDay })
-      setToast(language === "en" ? "Procession saved · atlas view restored" : "游线已保存 · 已返回图鉴视角")
+      setRouteProgress(null)
+      setToast(language === "en" ? "Trail badge saved · atlas view restored" : "游线徽章已保存 · 已返回图鉴视角")
       setActiveRouteId(null)
       setRouteStopIndex(0)
       resetView()
@@ -607,7 +710,7 @@ export default function App() {
         )}
       </div>
 
-      <ProcessionPicker isOpen={routePickerOpen} language={language} onClose={() => setRoutePickerOpen(false)} onStart={handleStartRoute} />
+      <ProcessionPicker isOpen={routePickerOpen} language={language} routeProgress={routeProgress} onClose={() => setRoutePickerOpen(false)} onStart={handleStartRoute} onResume={handleResumeRoute} />
 
       <DiscoveryJournal
         isOpen={journalOpen}
@@ -624,7 +727,7 @@ export default function App() {
         history={progressHistory}
         currentRound={PROGRESS_HISTORY.at(-1)?.round ?? 1}
         language={language}
-        remainingGaps={language === 'zh' ? ['让未完成的游线可以在下次访问时继续。', '把一枚图鉴印记分享给同行者。', '继续优化低功耗设备上的 WebGL 构图与纹理内存。'] : ['Resume an unfinished procession between visits.', 'Share a field journal moment with someone else.', 'Tune low-power WebGL framing and texture memory.']}
+        remainingGaps={language === 'zh' ? ['把一枚图鉴印记分享给同行者。', '继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为完成的游线印记建立更丰富的视觉档案。'] : ['Share a field journal moment with someone else.', 'Tune low-power WebGL framing and texture memory.', 'Give completed trail seals a richer visual archive.']}
       />
 
       {toast && (

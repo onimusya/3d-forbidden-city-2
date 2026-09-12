@@ -35,6 +35,7 @@ export type JournalRoute = {
   titleZh: string
   stops: readonly JournalRouteStop[]
   completed: boolean
+  progressIndex?: number
   completedAt?: string
   season?: Season
   timeOfDay?: TimeOfDay
@@ -226,16 +227,19 @@ export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose,
                 <span>{isChinese ? "完成游线，保存一次完整行进" : "Complete a procession to save the full passage"}</span>
               </div>
               <div className="journal-route-grid">
-                {routes.map((route, index) => (
-                  <article key={route.id} className={`journal-route-card${route.completed ? " is-completed" : ""}`}>
-                    <div className="journal-route-card__topline"><span className="micro">{String(index + 1).padStart(2, "0")} · {route.stops.length} {isChinese ? "站" : "stops"}</span>{route.completed ? <BadgeCheck size={15} strokeWidth={1.6} aria-label={isChinese ? "已完成" : "Completed"} /> : <Route size={15} strokeWidth={1.5} aria-hidden="true" />}</div>
-                    <h3 className="display-serif">{isChinese ? route.titleZh : route.title}</h3>
-                    <div className="journal-route-card__stops">{route.stops.map((stop, stopIndex) => <span key={stop.id}>{String(stopIndex + 1).padStart(2, "0")} · {isChinese ? stop.chineseName : stop.title}</span>)}</div>
-                    <div className="journal-route-card__footer">
-                      {route.completed ? <><span>{isChinese ? "已完成" : "Completed"}</span><small>{formatRouteMoment(route, language)}</small></> : <><span>{isChinese ? "可开始" : "Ready to walk"}</span><small>{isChinese ? "打开游线开始行进" : "Open Processions to begin"}</small></>}
-                    </div>
-                  </article>
-                ))}
+                {routes.map((route, index) => {
+                  const isInProgress = route.progressIndex !== undefined && !route.completed
+                  return (
+                    <article key={route.id} className={"journal-route-card" + (route.completed ? " is-completed" : isInProgress ? " is-in-progress" : "")}>
+                      <div className="journal-route-card__topline"><span className="micro">{String(index + 1).padStart(2, "0")} · {route.stops.length} {isChinese ? "站" : "stops"}</span>{route.completed ? <BadgeCheck size={15} strokeWidth={1.6} aria-label={isChinese ? "已完成" : "Completed"} /> : <Route size={15} strokeWidth={1.5} aria-hidden="true" />}</div>
+                      <h3 className="display-serif">{isChinese ? route.titleZh : route.title}</h3>
+                      <div className="journal-route-card__stops">{route.stops.map((stop, stopIndex) => <span key={stop.id}>{String(stopIndex + 1).padStart(2, "0")} · {isChinese ? stop.chineseName : stop.title}</span>)}</div>
+                      <div className="journal-route-card__footer">
+                        {route.completed ? <><span>{isChinese ? "已完成" : "Completed"}</span><small>{formatRouteMoment(route, language)}</small></> : isInProgress ? <><span>{isChinese ? "进行中" : "In progress"}</span><small>{isChinese ? "第 " + ((route.progressIndex ?? 0) + 1) + " 站已保存 · 打开游线继续" : "Stop " + ((route.progressIndex ?? 0) + 1) + " saved · Open Processions to continue"}</small></> : <><span>{isChinese ? "可开始" : "Ready to walk"}</span><small>{isChinese ? "打开游线开始行进" : "Open Processions to begin"}</small></>}
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             </section>
           )}

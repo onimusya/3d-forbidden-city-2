@@ -20,6 +20,11 @@ export type RouteCompletion = AtlasMoment & {
   completedAt: string
 }
 
+export type RouteProgress = {
+  routeId: string
+  stopIndex: number
+}
+
 const SEASON_ORDER: readonly Season[] = ["spring", "summer", "autumn", "winter"]
 
 type AtlasState = {
@@ -28,6 +33,7 @@ type AtlasState = {
   discoveredIds: string[]
   discoveryRecords: DiscoveryRecord[]
   completedRoutes: RouteCompletion[]
+  routeProgress: RouteProgress | null
   language: Language
   progressOpen: boolean
   helpVisible: boolean
@@ -39,6 +45,7 @@ type AtlasState = {
   setHovered: (id: string | null) => void
   discover: (id: string, moment?: AtlasMoment) => boolean
   completeRoute: (routeId: string, moment?: AtlasMoment) => boolean
+  setRouteProgress: (progress: RouteProgress | null) => void
   setLanguage: (language: Language) => void
   setProgressOpen: (open: boolean) => void
   setHelpVisible: (visible: boolean) => void
@@ -56,6 +63,7 @@ export const useAtlasStore = create<AtlasState>()(
       discoveredIds: [],
       discoveryRecords: [],
       completedRoutes: [],
+      routeProgress: null,
       language: 'en',
       progressOpen: false,
       helpVisible: true,
@@ -81,6 +89,7 @@ export const useAtlasStore = create<AtlasState>()(
         }))
         return true
       },
+      setRouteProgress: (routeProgress) => set({ routeProgress }),
       setLanguage: (language) => set({ language }),
       setProgressOpen: (progressOpen) => set({ progressOpen }),
       setHelpVisible: (helpVisible) => set({ helpVisible }),
@@ -98,6 +107,7 @@ export const useAtlasStore = create<AtlasState>()(
         discoveredIds: state.discoveredIds,
         discoveryRecords: state.discoveryRecords,
         completedRoutes: state.completedRoutes,
+        routeProgress: state.routeProgress,
         language: state.language,
         soundEnabled: state.soundEnabled,
         timeOfDay: state.timeOfDay,
