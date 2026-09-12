@@ -106,10 +106,10 @@ const FALLBACK_HISTORY: readonly ProgressHistoryEntry[] = [
 
 const PROGRESS_COPY = {
   en: {
-    eyebrow: 'Archive / progress log', title: 'A city, in revision.', close: 'Close progress', currentRound: 'Current round', fieldReview: 'Field review / 05.09.26', overviewFallback: 'A measured pass through structure, shadow, and the memory held between them.', atlasScore: 'Atlas score', sinceRoundOne: 'since round one', sitesFound: 'Sites found', spatialIndex: 'Spatial index', lastReview: 'Last review', curatorNotes: 'Curator notes saved', comparisonNumber: '01 / Visual comparison', comparisonTitle: 'The latest pass, beside the last.', comparisonNote: 'Reading the model as a sequence', before: 'Before', now: 'Now', verdictNumber: '02 / Critic verdicts', verdictTitle: 'What is holding.', confirmed: 'Confirmed', nextAttention: 'Next attention', gapsNumber: '03 / Remaining gaps', gapsTitle: 'The open edges.', nextReview: 'Next review: refine one relationship at a time.', timelineNumber: '04 / Improvements over time', timelineTitle: 'A slower, clearer line.', timelineNote: 'Eight recorded passes', score: 'Score', fieldPass: 'Field pass', sitesIndexed: 'sites indexed.', footerLeft: 'Forbidden City Atlas / archive record 01', footerRight: 'Save the next question, not only the answer.',
+    eyebrow: 'Archive / progress log', title: 'A city, in revision.', close: 'Close progress', currentRound: 'Current round', fieldReview: 'Field review', overviewFallback: 'A measured pass through structure, shadow, and the memory held between them.', atlasScore: 'Atlas score', sinceRoundOne: 'since round one', sitesFound: 'Sites found', spatialIndex: 'Spatial index', lastReview: 'Last review', curatorNotes: 'Curator notes saved', comparisonNumber: '01 / Visual comparison', comparisonTitle: 'The latest pass, beside the last.', comparisonNote: 'Reading the model as a sequence', before: 'Before', now: 'Now', verdictNumber: '02 / Critic verdicts', verdictTitle: 'What is holding.', confirmed: 'Confirmed', nextAttention: 'Next attention', gapsNumber: '03 / Remaining gaps', gapsTitle: 'The open edges.', nextReview: 'Next review: refine one relationship at a time.', timelineNumber: '04 / Improvements over time', timelineTitle: 'A slower, clearer line.', timelineNote: ' recorded passes', score: 'Score', fieldPass: 'Field pass', sitesIndexed: 'sites indexed.', footerLeft: 'Forbidden City Atlas / archive record 01', footerRight: 'Save the next question, not only the answer.',
   },
   zh: {
-    eyebrow: '档案 / 进度记录', title: '一座城，持续修订。', close: '关闭进度', currentRound: '当前轮次', fieldReview: '现场评审 / 2026.09.05', overviewFallback: '一次穿过结构、阴影与记忆的克制漫游。', atlasScore: '图鉴评分', sinceRoundOne: '比第一轮', sitesFound: '已发现地标', spatialIndex: '空间索引', lastReview: '最近评审', curatorNotes: '策展笔记已保存', comparisonNumber: '01 / 视觉对比', comparisonTitle: '把最新一轮放在上一轮身旁。', comparisonNote: '将模型读作一段序列', before: '之前', now: '现在', verdictNumber: '02 / 评审结论', verdictTitle: '哪些已经站稳。', confirmed: '已确认', nextAttention: '下一步关注', gapsNumber: '03 / 待补空缺', gapsTitle: '仍然敞开的边缘。', nextReview: '下一轮评审：一次只打磨一段关系。', timelineNumber: '04 / 持续改进', timelineTitle: '一条更慢、更清晰的线。', timelineNote: '八轮记录', score: '评分', fieldPass: '现场迭代', sitesIndexed: '个地标已编入索引。', footerLeft: '故宫图鉴 / 档案记录 01', footerRight: '留下下一个问题，而不只是答案。',
+    eyebrow: '档案 / 进度记录', title: '一座城，持续修订。', close: '关闭进度', currentRound: '当前轮次', fieldReview: '现场评审', overviewFallback: '一次穿过结构、阴影与记忆的克制漫游。', atlasScore: '图鉴评分', sinceRoundOne: '比第一轮', sitesFound: '已发现地标', spatialIndex: '空间索引', lastReview: '最近评审', curatorNotes: '策展笔记已保存', comparisonNumber: '01 / 视觉对比', comparisonTitle: '把最新一轮放在上一轮身旁。', comparisonNote: '将模型读作一段序列', before: '之前', now: '现在', verdictNumber: '02 / 评审结论', verdictTitle: '哪些已经站稳。', confirmed: '已确认', nextAttention: '下一步关注', gapsNumber: '03 / 待补空缺', gapsTitle: '仍然敞开的边缘。', nextReview: '下一轮评审：一次只打磨一段关系。', timelineNumber: '04 / 持续改进', timelineTitle: '一条更慢、更清晰的线。', timelineNote: '轮记录', score: '评分', fieldPass: '现场迭代', sitesIndexed: '个地标已编入索引。', footerLeft: '故宫图鉴 / 档案记录 01', footerRight: '留下下一个问题，而不只是答案。',
   },
 } as const
 
@@ -136,6 +136,13 @@ function roundLabel(round: number | string, language: 'en' | 'zh' = 'en') {
   return language === 'zh'
     ? '第 ' + number.padStart(2, '0') + ' 轮'
     : value.toLowerCase().startsWith('round') ? value : 'Round ' + value.padStart(2, '0')
+}
+
+function reviewDateLabel(date: string | undefined, language: 'en' | 'zh') {
+  if (!date) return '—'
+  const [year, month, day] = date.split('-')
+  if (!year || !month || !day) return date
+  return language === 'zh' ? [year, month, day].join('.') : [day, month, year.slice(-2)].join('.')
 }
 
 export function ProgressPage({
@@ -237,7 +244,7 @@ export function ProgressPage({
                   {roundLabel(activeRound, language)}
                 </h2>
               </div>
-              <span className="progress-overview__stamp micro">{ui.fieldReview}</span>
+              <span className="progress-overview__stamp micro">{ui.fieldReview} / {reviewDateLabel(latest?.date, language)}</span>
             </div>
             <p>{latest?.summary ?? ui.overviewFallback}</p>
             <div className="progress-stats">
@@ -376,7 +383,7 @@ export function ProgressPage({
                   {ui.timelineTitle}
                 </h2>
               </div>
-              <span className="section-heading__note">{ui.timelineNote}</span>
+              <span className="section-heading__note">{timeline.length}{ui.timelineNote}</span>
             </div>
             <ol className="progress-timeline">
               {timeline.map((entry, index) => {

@@ -33,6 +33,10 @@ export type JournalRoute = {
   id: string
   title: string
   titleZh: string
+  trail: string
+  trailZh: string
+  reward: string
+  rewardZh: string
   stops: readonly JournalRouteStop[]
   completed: boolean
   progressIndex?: number
@@ -42,6 +46,9 @@ export type JournalRoute = {
 }
 
 type JournalFilter = "all" | "sites" | "routes"
+type ArchiveKind = "all" | "landmarks" | "routes"
+type ArchiveSeason = Season | "all"
+type ArchiveTime = TimeOfDay | "all"
 
 export interface DiscoveryJournalProps {
   isOpen: boolean
@@ -50,6 +57,7 @@ export interface DiscoveryJournalProps {
   routes: readonly JournalRoute[]
   onClose: () => void
   onSelectLandmark: (id: string) => void
+  onOpenLandmarkPostcard?: (id: string) => void
   onOpenRoutePostcard?: (id: string) => void
 }
 
@@ -86,16 +94,22 @@ function MomentStamp({ landmark, language }: { landmark: JournalLandmark; langua
   )
 }
 
-export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose, onSelectLandmark, onOpenRoutePostcard }: DiscoveryJournalProps) {
+export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose, onSelectLandmark, onOpenLandmarkPostcard, onOpenRoutePostcard }: DiscoveryJournalProps) {
   const titleId = useId()
   const dialogRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const restoreFocusRef = useRef<HTMLElement | null>(null)
   const [filter, setFilter] = useState<JournalFilter>("all")
+  const [archiveKind, setArchiveKind] = useState<ArchiveKind>("all")
+  const [archiveSeason, setArchiveSeason] = useState<ArchiveSeason>("all")
+  const [archiveTime, setArchiveTime] = useState<ArchiveTime>("all")
   const isChinese = language === "zh"
   const discovered = landmarks.filter((landmark) => landmark.discovered)
   const completedRoutes = routes.filter((route) => route.completed)
   const latestDiscovery = [...discovered].sort((left, right) => (right.discoveredAt ?? "").localeCompare(left.discoveredAt ?? ""))[0]
+  const galleryLandmarks = discovered.filter((landmark) => (archiveSeason === "all" || landmark.season === archiveSeason) && (archiveTime === "all" || landmark.timeOfDay === archiveTime) && (archiveKind !== "routes"))
+  const galleryRoutes = completedRoutes.filter((route) => (archiveSeason === "all" || route.season === archiveSeason) && (archiveTime === "all" || route.timeOfDay === archiveTime) && (archiveKind !== "landmarks"))
+  const galleryCount = galleryLandmarks.length + galleryRoutes.length
 
   useEffect(() => {
     if (!isOpen) return undefined
@@ -177,6 +191,49 @@ export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose,
             </div>
           </div>
 
+          <section className="journal-gallery-section" aria-labelledby={titleId + "-gallery"}>
+            <div className="journal-section__heading journal-gallery-section__heading">
+              <div>
+                <span className="micro">01 / {isChinese ? "记忆架" : "Memory shelf"}</span>
+                <h2 className="display-serif" id={titleId + "-gallery"}>{isChinese ? "把这一刻带走。" : "Take the moment with you."}</h2>
+              </div>
+              <span>{isChinese ? "筛选印记，重返现场，或重新打开一张明信片" : "Filter the seals, replay a site, or reopen a postcard"}</span>
+            </div>
+            <div className="journal-gallery__controls">
+              <div className="journal-gallery__kinds" role="group" aria-label={isChinese ? "记忆类型" : "Memory type"}>
+                {(["all", "landmarks", "routes"] as const).map((value) => {
+                  const label = value === "all" ? isChinese ? "全部" : "Everything" : value === "landmarks" ? isChinese ? "地标印记" : "Field seals" : isChinese ? "游线徽章" : "Trail badges"
+                  return <button key={value} className={archiveKind === value ? "is-active" : ""} type="button" aria-pressed={archiveKind === value} onClick={() => setArchiveKind(value)}>{label}</button>
+                })}
+              </div>
+              <div className="journal-gallery__selects">
+                <label><span className="micro">{isChinese ? "季节" : "Season"}</span><select value={archiveSeason} onChange={(event) => setArchiveSeason(event.target.value as ArchiveSeason)}><option value="all">{isChinese ? "全部季节" : "All seasons"}</option>{(["spring", "summer", "autumn", "winter"] as const).map((value) => <option key={value} value={value}>{SEASON_LABELS[value][language]}</option>)}</select></label>
+                <label><span className="micro">{isChinese ? "时刻" : "Time"}</span><select value={archiveTime} onChange={(event) => setArchiveTime(event.target.value as ArchiveTime)}><option value="all">{isChinese ? "昼夜皆可" : "Day or night"}</option><option value="day">{isChinese ? "昼" : "Day"}</option><option value="night">{isChinese ? "夜" : "Night"}</option></select></label>
+              </div>
+            </div>
+            <div className="journal-gallery">
+              {archiveKind !== "routes" && galleryLandmarks.map((landmark) => (
+                <article className="journal-gallery-card journal-gallery-card--landmark" key={"gallery-" + landmark.id} data-season={landmark.season ?? "summer"} data-time={landmark.timeOfDay ?? "day"}>
+                  <div className="journal-gallery-card__topline"><span className="micro">{String(landmark.index).padStart(2, "0")} · {isChinese ? "现场印记" : "FIELD SEAL"}</span><span className="journal-gallery-card__stamp">{landmark.season ? SEASON_LABELS[landmark.season][language] : "Atlas"} · {landmark.timeOfDay === "night" ? isChinese ? "夜" : "Night" : isChinese ? "昼" : "Day"}</span></div>
+                  <button className="journal-gallery-card__content" type="button" aria-label={(isChinese ? "重返 " : "Replay ") + (isChinese ? landmark.chineseName : landmark.title)} onClick={() => onSelectLandmark(landmark.id)}>
+                    <span className="journal-gallery-card__scene" data-season={landmark.season ?? "summer"} data-time={landmark.timeOfDay ?? "day"} aria-hidden="true"><span className="journal-gallery-card__scene-grid" /><span className="journal-gallery-card__scene-ground" /><span className="journal-gallery-card__scene-building"><span /><i /><b /></span><span className="journal-gallery-card__scene-marker">✦</span></span>
+                    <span className="journal-gallery-card__names"><span>{landmark.chineseName}</span><strong className="display-serif">{isChinese ? landmark.chineseName : landmark.title}</strong></span>
+                  </button>
+                  <div className="journal-gallery-card__bottom"><span className="journal-gallery-card__artifact">{isChinese ? landmark.artifactZh : landmark.artifact}</span><div className="journal-gallery-card__actions"><button type="button" onClick={() => onSelectLandmark(landmark.id)}>{isChinese ? "重返现场" : "Replay site"}</button>{onOpenLandmarkPostcard ? <button type="button" onClick={() => onOpenLandmarkPostcard(landmark.id)}>{isChinese ? "明信片" : "Postcard"}</button> : null}</div></div>
+                </article>
+              ))}
+              {archiveKind !== "landmarks" && galleryRoutes.map((route) => (
+                <article className="journal-gallery-card journal-gallery-card--route" key={"gallery-" + route.id} data-season={route.season ?? "summer"} data-time={route.timeOfDay ?? "day"}>
+                  <div className="journal-gallery-card__topline"><span className="micro">{route.stops.length} {isChinese ? "站" : "STOPS"} · {isChinese ? "游线徽章" : "TRAIL BADGE"}</span><span className="journal-gallery-card__stamp">{route.season ? SEASON_LABELS[route.season][language] : "Atlas"} · {route.timeOfDay === "night" ? isChinese ? "夜" : "Night" : isChinese ? "昼" : "Day"}</span></div>
+                  <div className="journal-gallery-card__scene journal-gallery-card__scene--route" data-season={route.season ?? "summer"} data-time={route.timeOfDay ?? "day"} aria-hidden="true"><span className="journal-gallery-card__scene-grid" /><span className="journal-gallery-card__route-line" /> <span className="journal-gallery-card__route-stops">{route.stops.map((stop, index) => <i key={stop.id}>{index + 1}</i>)}</span><span className="journal-gallery-card__scene-marker">✦</span></div>
+                  <div className="journal-gallery-card__route-copy"><span className="journal-gallery-card__route-label micro">{isChinese ? route.trailZh : route.trail}</span><h3 className="display-serif">{isChinese ? route.titleZh : route.title}</h3><span>{isChinese ? route.rewardZh : route.reward}</span></div>
+                  <div className="journal-gallery-card__bottom"><span className="journal-gallery-card__artifact">{formatRouteMoment(route, language)}</span>{onOpenRoutePostcard ? <button className="journal-gallery-card__route-action" type="button" onClick={() => onOpenRoutePostcard(route.id)}><Share2 size={12} strokeWidth={1.6} aria-hidden="true" />{isChinese ? "打开明信片" : "Open postcard"}<span aria-hidden="true">↗</span></button> : null}</div>
+                </article>
+              ))}
+            </div>
+            {!galleryCount && <p className="journal-empty journal-gallery__empty">{isChinese ? "筛选条件下还没有保存的时刻。回到地图，继续探索。" : "No saved moments match these filters. Return to the map and keep exploring."}</p>}
+          </section>
+
           <nav className="journal-filter" aria-label={isChinese ? "档案筛选" : "Journal filters"}>
             {(["all", "sites", "routes"] as const).map((value) => {
               const label = value === "all" ? isChinese ? "全部" : "Everything" : value === "sites" ? isChinese ? "地标" : "Discoveries" : isChinese ? "游线" : "Processions"
@@ -189,7 +246,7 @@ export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose,
             <section className="journal-section" aria-labelledby={`${titleId}-sites`}>
               <div className="journal-section__heading">
                 <div>
-                  <span className="micro">01 / {isChinese ? "地标簿" : "Landmark ledger"}</span>
+                  <span className="micro">02 / {isChinese ? "地标簿" : "Landmark ledger"}</span>
                   <h2 className="display-serif" id={`${titleId}-sites`}>{isChinese ? "一座座建筑，一枚枚印记。" : "One building, one field seal."}</h2>
                 </div>
                 <span>{isChinese ? "点击记录，返回现场" : "Select an entry to return to the site"}</span>
@@ -222,7 +279,7 @@ export function DiscoveryJournal({ isOpen, language, landmarks, routes, onClose,
             <section className="journal-section journal-routes" aria-labelledby={`${titleId}-routes`}>
               <div className="journal-section__heading">
                 <div>
-                  <span className="micro">02 / {isChinese ? "游线簿" : "Procession ledger"}</span>
+                  <span className="micro">03 / {isChinese ? "游线簿" : "Procession ledger"}</span>
                   <h2 className="display-serif" id={`${titleId}-routes`}>{isChinese ? "走过的路，也会留下徽章。" : "A route walked becomes a badge."}</h2>
                 </div>
                 <span>{isChinese ? "完成游线，保存一次完整行进" : "Complete a procession to save the full passage"}</span>

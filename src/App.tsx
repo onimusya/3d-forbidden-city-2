@@ -69,6 +69,7 @@ const PROGRESS_HISTORY_ZH = [
   { label: "记忆落地", summary: "地标印记与游线徽章会被保存，让每次漫游都能成为下一次探索的线索。" },
   { label: "当前迭代 · 游线回声", summary: "探索游线会在抵达时收集印记，也会记住未完成的故事，等你下次继续。" },
   { label: "把这一刻带走", summary: "地标印记与完成的游线现在可以变成明信片，分享、下载，或通过链接重新打开。" },
+  { label: "给记忆一间房", summary: "图鉴现在以视觉记忆架开始，保存地标印记与游线徽章，并支持按类型、季节和昼夜筛选。" },
 ] as const
 
 function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], language: 'en' | 'zh'): DiscoveryLandmark {
@@ -392,6 +393,10 @@ export default function App() {
       id: route.id,
       title: route.title,
       titleZh: route.titleZh,
+      trail: route.trail,
+      trailZh: route.trailZh,
+      reward: route.reward,
+      rewardZh: route.rewardZh,
       stops,
       completed: Boolean(completion),
       progressIndex: routeProgress?.routeId === route.id ? routeProgress.stopIndex : undefined,
@@ -817,6 +822,7 @@ export default function App() {
         routes={journalRoutes}
         onClose={() => setJournalOpen(false)}
         onSelectLandmark={handleJournalLandmarkSelect}
+        onOpenLandmarkPostcard={handleOpenLandmarkPostcard}
         onOpenRoutePostcard={handleOpenRoutePostcard}
       />
 
@@ -828,7 +834,7 @@ export default function App() {
         history={progressHistory}
         currentRound={PROGRESS_HISTORY.at(-1)?.round ?? 1}
         language={language}
-        remainingGaps={language === 'zh' ? ['继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为完成的游线印记建立更丰富的视觉档案。', '为分享的时刻建立公开图鉴画廊。'] : ['Tune low-power WebGL framing and texture memory.', 'Give completed trail seals a richer visual archive.', 'Add a public gallery for shared moments.']}
+        remainingGaps={language === 'zh' ? ['继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为分享的时刻建立公开图鉴画廊。', '增加跨次访问的游线对照阅读。'] : ['Tune low-power WebGL framing and texture memory.', 'Add a public gallery for shared moments.', 'Add richer cross-visit route comparisons.']}
       />
 
       {toast && (
