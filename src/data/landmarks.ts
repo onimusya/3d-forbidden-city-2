@@ -20,6 +20,8 @@ export interface Landmark {
   description: string
   era: string
   fact: string
+  context: string
+  contextZh: string
   accent: string
   discoveryLabel?: string
   featured?: boolean
@@ -39,6 +41,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'Five openings mark the ceremonial threshold where the imperial route begins.',
     era: 'Ming dynasty · Yongle era, 1420',
     fact: 'Its central passage was reserved for the emperor, making the gate a precise lesson in courtly rank.',
+    context: 'Completed in 1420 under the Yongle emperor, Meridian Gate is the palace’s southern ceremonial face. Its five openings turned movement into a choreography of rank: the center was reserved for the emperor, while officials and guards used the flanking passages.',
+    contextZh: '午门于永乐年间（1420）建成，是宫城面向南方的礼仪正面。五座门洞把行进变成等级秩序：中央门洞留给皇帝，百官与守卫使用两侧通道。',
     accent: '#efb05c',
     discoveryLabel: 'ORIGIN POINT',
     featured: true,
@@ -55,6 +59,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'Beyond the Golden Water bridges, the court gathers before the Three Great Halls.',
     era: 'Ming dynasty · Yongle era, 1420',
     fact: 'It is the principal gate of the Outer Court and the first major threshold north of Meridian Gate.',
+    context: 'The gate sits beyond five marble bridges over the Golden Water River, where the approach begins to widen into the Outer Court. Its broad platform and paired guardian lions announce a change from passage to public ceremony.',
+    contextZh: '太和门位于金水河五座石桥之后，通往外朝的道路在这里开始展开。宽阔的台基与成对的铜狮，将空间从通行的门槛转为公开的典礼场所。',
     accent: '#d8924b',
     discoveryLabel: 'FIRST THRESHOLD',
   },
@@ -70,6 +76,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'The highest roof on the axis rises above a three-tiered marble terrace.',
     era: 'Ming foundation · Qing reconstruction, Kangxi era',
     fact: 'The largest hall in the Forbidden City, it was reserved for the empire’s most important ceremonies.',
+    context: 'Hall of Supreme Harmony dominates the northward view from the Outer Court, lifted above three terraces of white marble. Imperial enthronements, birthdays, New Year audiences, and military ceremonies used this stage to make the state visible.',
+    contextZh: '太和殿从外朝中轴线的北端升起，矗立在三层汉白玉台基之上。登极、大寿、元旦朝贺与军事典礼等重要仪式，都借这座高台让国家秩序变得可见。',
     accent: '#f2c96f',
     discoveryLabel: 'CEREMONIAL CORE',
     featured: true,
@@ -86,6 +94,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'An intimate square hall poised between ceremony and the long imperial terrace.',
     era: 'Ming dynasty · Yongle era, 1420',
     fact: 'The emperor paused here to prepare himself before continuing to the larger halls for a state rite.',
+    context: 'With its compact square plan and pyramidal roof, the hall creates a deliberate pause between the two larger ceremonial buildings. The emperor used this smaller room to prepare, rest, and gather himself before appearing in the main hall.',
+    contextZh: '中和殿以紧凑的方形平面和攒尖屋顶，在两座大型典礼宫殿之间制造了一处有意的停顿。皇帝在这里整备、休息，再进入正殿主持仪式。',
     accent: '#dfb664',
   },
   {
@@ -100,6 +110,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'The northern crown of the Outer Court holds the axis before it enters private space.',
     era: 'Ming foundation · Qing reconstruction',
     fact: 'During the Qing dynasty, the final stage of the Palace Examination was held in this hall.',
+    context: 'At the far end of the Outer Court, the hall closes the public ceremonial sequence before the route crosses into the Inner Court. Its large interior also hosted the final Palace Examination, connecting architecture with the machinery of the civil service.',
+    contextZh: '保和殿位于外朝最北端，在路线进入内廷前收束公开的典礼序列。殿内也曾举行殿试最后一场考试，让建筑与文官制度的运转联系在一起。',
     accent: '#e1a667',
     discoveryLabel: 'OUTER COURT',
   },
@@ -115,6 +127,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'An austere gate frames the turn from public spectacle to the emperor’s household.',
     era: 'Ming dynasty · Yongle era, 1420',
     fact: 'It marks the threshold of the Inner Court, with the Rear Three Palaces immediately beyond.',
+    context: 'Passing through this gate changes the scale and social logic of the route. Officials gave way to the private household of the emperor and empress, while the roofline and courtyards become more measured and inward-looking.',
+    contextZh: '穿过乾清门，路线的尺度与社会秩序随之改变。百官退到身后，皇帝与皇后的家宅展开；屋顶和院落也变得更克制、更向内。',
     accent: '#c99a5a',
     discoveryLabel: 'INNER COURT',
   },
@@ -130,6 +144,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'Once a residence, its raised throne room made domestic space part of statecraft.',
     era: 'Ming foundation · Qing court residence',
     fact: 'Ming and early Qing emperors lived here; from the Yongzheng reign, daily imperial work shifted west.',
+    context: 'The palace was both a residence and a stage for receiving officials, with a long central hall raised above the Inner Court. A famous plaque reading “Upright and Grand” marked the political ideal behind the emperor’s private quarters.',
+    contextZh: '乾清宫既是居所，也是皇帝接见臣下的场所，中央长殿高踞内廷台基之上。殿内“正大光明”匾额，指向帝王私宅背后的政治理想。',
     accent: '#e07b50',
     discoveryLabel: 'IMPERIAL RESIDENCE',
     featured: true,
@@ -146,6 +162,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'Between two palaces, a compact hall gives the Inner Court its symbolic balance.',
     era: 'Ming foundation · Qing imperial interior',
     fact: 'Under the Qing, the hall kept the imperial seals and a water clock within the Rear Three Palaces.',
+    context: 'Set between the Palace of Heavenly Purity and the Palace of Earthly Tranquility, this smaller hall is the hinge of the Rear Three Palaces. Its name suggests a union of heaven and earth, while its practical life included the storage of seals and the keeping of time.',
+    contextZh: '交泰殿位于乾清宫与坤宁宫之间，是后三宫的转轴。殿名寓意天地交泰；清代这里还收藏宝玺，并以铜壶滴漏记录时间。',
     accent: '#e6bf68',
   },
   {
@@ -160,6 +178,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'Behind the Hall of Union, the empress’s palace completes the Rear Three Palaces.',
     era: 'Ming foundation · Qing reconfiguration, 1655',
     fact: 'In the Qing period, its eastern warm chamber served as the imperial wedding chamber.',
+    context: 'The northern palace completes the axial sequence of the Rear Three Palaces, but its history is more layered than the geometry suggests. The Qing remodelled the building for Manchu court customs, including the eastern warm chamber used for imperial weddings.',
+    contextZh: '坤宁宫完成后三宫的中轴序列，但它的历史比平面几何更为复杂。清代按照满洲宫廷习俗重新调整建筑，东暖阁也成为帝王婚房。',
     accent: '#d87650',
     discoveryLabel: 'NEXT CHAMBER',
   },
@@ -175,6 +195,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'Cypress, rockery, pavilions, and framed views close the northern route in miniature.',
     era: 'Ming dynasty · Yongle era, completed 1417',
     fact: 'Qin’an Hall anchors the garden’s central line, where cultivated landscape meets ritual geometry.',
+    context: 'Created before the main palace complex was complete, the garden compresses an imperial landscape into a dense northern courtyard. Ancient cypresses, Taihu rocks, pavilions, and Qin’an Hall create a deliberately irregular ending to the city’s strict axis.',
+    contextZh: '御花园在宫城主体完成前已开始营造，把帝王园林压缩进北端的一方院落。古柏、太湖石、亭台与钦安殿，让严整的中轴线在这里以更自由的景观收束。',
     accent: '#9dc49a',
     discoveryLabel: 'NORTHERN CLOSE',
   },
@@ -190,6 +212,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'On the eastern flank, scholarship softens the rigid geometry of the ceremonial court.',
     era: 'Ming dynasty · Yongle era, 1420',
     fact: 'The hall was associated with imperial lectures and the scholarly life of the eastern court.',
+    context: 'Away from the main north-south procession, the eastern court holds the quieter work of learning and interpretation. Lectures, study, and imperial literary culture gave this side of the palace a different tempo from the public ceremonies on the central axis.',
+    contextZh: '离开南北向的主游线，东侧宫院承载着学习与诠释的日常工作。讲学、读书与帝王文脉，让这里拥有不同于中轴典礼的节奏。',
     accent: '#a7c8b4',
     discoveryLabel: 'EASTERN SIDE COURT',
   },
@@ -205,6 +229,8 @@ export const LANDMARKS: Landmark[] = [
     description: 'West of the axis, this working palace reveals the court behind the ceremony.',
     era: 'Ming foundation · Yongzheng reign, 1723',
     fact: 'From 1723 onward, it became the principal residence and work center of Qing emperors.',
+    context: 'The hall began as a Ming side palace, then became the operational heart of Qing rule when the Yongzheng emperor moved his residence and daily work here. Its rooms preserve the tension between intimate domestic life and the constant business of governing.',
+    contextZh: '养心殿始建于明代，雍正帝于1723年将居住与日常政务移至此处后，它成为清代统治的工作核心。这里的空间始终在私密生活与持续运转的政务之间拉扯。',
     accent: '#8fc1ad',
     discoveryLabel: 'WESTERN SIDE COURT',
     featured: true,

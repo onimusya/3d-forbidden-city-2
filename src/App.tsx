@@ -70,6 +70,7 @@ const PROGRESS_HISTORY_ZH = [
   { label: "当前迭代 · 游线回声", summary: "探索游线会在抵达时收集印记，也会记住未完成的故事，等你下次继续。" },
   { label: "把这一刻带走", summary: "地标印记与完成的游线现在可以变成明信片，分享、下载，或通过链接重新打开。" },
   { label: "给记忆一间房", summary: "图鉴现在以视觉记忆架开始，保存地标印记与游线徽章，并支持按类型、季节和昼夜筛选。" },
+  { label: "让每个地点开口", summary: "每座地标现在都有更深入的双语背景，并在打开时加载带有来源与日期的现场照片。" },
 ] as const
 
 function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], language: 'en' | 'zh'): DiscoveryLandmark {
@@ -797,6 +798,8 @@ export default function App() {
               era: selectedLandmark.era,
               description: selectedLandmark.description,
               fact: selectedLandmark.fact,
+              context: selectedLandmark.context,
+              contextZh: selectedLandmark.contextZh,
               categoryZh: LANDMARK_COPY_ZH[selectedLandmark.id]?.category,
               eraZh: LANDMARK_COPY_ZH[selectedLandmark.id]?.era,
               descriptionZh: LANDMARK_COPY_ZH[selectedLandmark.id]?.description,
@@ -834,7 +837,7 @@ export default function App() {
         history={progressHistory}
         currentRound={PROGRESS_HISTORY.at(-1)?.round ?? 1}
         language={language}
-        remainingGaps={language === 'zh' ? ['继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为分享的时刻建立公开图鉴画廊。', '增加跨次访问的游线对照阅读。'] : ['Tune low-power WebGL framing and texture memory.', 'Add a public gallery for shared moments.', 'Add richer cross-visit route comparisons.']}
+        remainingGaps={language === 'zh' ? ['继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为分享的时刻建立公开图鉴画廊。', '增加全屏照片灯箱，用于对照现场影像。'] : ['Tune low-power WebGL framing and texture memory.', 'Add a public gallery for shared moments.', 'Add a full-screen photo lightbox for comparing references.']}
       />
 
       {toast && (

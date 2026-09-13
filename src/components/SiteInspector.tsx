@@ -1,5 +1,7 @@
-import { useEffect, useId } from "react"
+import { useEffect, useId, useState } from "react"
 import { Check, MapPin, Share2, Sparkles, X } from "lucide-react"
+
+import { commonsSearchUrl, fetchCommonsPhotos, type CommonsPhoto } from "../lib/commonsPhotos"
 
 import "./overlay.css"
 
@@ -11,6 +13,8 @@ export interface Landmark {
   era: string
   description: string
   fact?: string
+  context?: string
+  contextZh?: string
   coordinates?: string
   discovered?: boolean
   isDiscovered?: boolean
@@ -31,6 +35,84 @@ export interface SiteInspectorProps {
   onDiscover?: (landmark: Landmark) => void
   onPostcard?: (landmark: Landmark) => void
   isDiscovering?: boolean
+}
+
+
+function PhotoGallery({ landmark, language }: { landmark: Landmark; language: InspectorLanguage }) {
+  const titleId = useId()
+  const [photos, setPhotos] = useState<CommonsPhoto[]>([])
+  const [status, setStatus] = useState<"loading" | "ready" | "empty" | "error">("loading")
+  const isChinese = language === "zh"
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setPhotos([])
+    setStatus("loading")
+
+    fetchCommonsPhotos(landmark.name, landmark.chineseName, controller.signal)
+      .then((nextPhotos) => {
+        if (controller.signal.aborted) return
+        setPhotos(nextPhotos)
+        setStatus(nextPhotos.length ? "ready" : "empty")
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setStatus("error")
+      })
+
+    return () => controller.abort()
+  }, [landmark.chineseName, landmark.id, landmark.name])
+
+  return (
+    <section className="site-inspector__photos" aria-labelledby={titleId}>
+      <div className="site-inspector__photos-heading">
+        <div>
+          <span className="micro">{isChinese ? "现场照片 /" : "Photo log /"} 03</span>
+          <h3 id={titleId}>{isChinese ? "最近的现场影像" : "Recent field photographs"}</h3>
+        </div>
+        <span className="site-inspector__photos-source">Wikimedia Commons</span>
+      </div>
+
+      {status === "loading" ? (
+        <div className="site-inspector__photo-loading" aria-live="polite">
+          <span className="site-inspector__photo-skeleton" />
+          <span className="site-inspector__photo-skeleton" />
+          <span className="site-inspector__photo-skeleton" />
+        </div>
+      ) : null}
+
+      {status === "ready" ? (
+        <div className="site-inspector__photo-grid">
+          {photos.map((photo) => (
+            <figure className="site-inspector__photo" key={photo.id}>
+              <a href={photo.sourceUrl} target="_blank" rel="noreferrer" aria-label={(isChinese ? "在 Wikimedia Commons 查看 " : "View source for ") + photo.title}>
+                <img src={photo.imageUrl} alt={photo.alt} loading="lazy" decoding="async" />
+                <span aria-hidden="true">↗</span>
+              </a>
+              <figcaption>
+                <strong>{photo.year ?? (isChinese ? "年代未知" : "Date unknown")}</strong>
+                <span>{photo.artist}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : null}
+
+      {status === "empty" || status === "error" ? (
+        <div className="site-inspector__photo-empty">
+          <p>{isChinese ? "暂时没有可加载的现场照片，仍可浏览该地点的公开图像。" : "No field photographs loaded yet, but the public image archive is still open."}</p>
+          <a href={commonsSearchUrl(landmark.name)} target="_blank" rel="noreferrer">
+            {isChinese ? "浏览公开图像" : "Browse photo archive"} <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      ) : null}
+
+      {status === "ready" ? (
+        <p className="site-inspector__photo-credit">
+          {isChinese ? "图片来自 Wikimedia Commons；请打开来源查看摄影者与授权信息。" : "Images via Wikimedia Commons; open a source to see photographer and license details."}
+        </p>
+      ) : null}
+    </section>
+  )
 }
 
 export function SiteInspector({
@@ -67,6 +149,7 @@ export function SiteInspector({
   const secondaryName = isChinese ? landmark.name : landmark.chineseName
   const description = isChinese ? landmark.descriptionZh ?? landmark.description : landmark.description
   const fact = isChinese ? landmark.factZh ?? landmark.fact : landmark.fact
+  const context = isChinese ? landmark.contextZh ?? landmark.context : landmark.context
 
   return (
     <aside
@@ -122,10 +205,19 @@ export function SiteInspector({
         </div>
       ) : null}
 
+      {context ? (
+        <div className="site-inspector__context">
+          <span className="micro">{isChinese ? "建筑故事" : "Deeper context"}</span>
+          <p>{context}</p>
+        </div>
+      ) : null}
+
       <div className="site-inspector__location">
         <MapPin size={14} strokeWidth={1.5} aria-hidden="true" />
         <span className="micro">{isChinese ? "内廷 / 中轴线" : landmark.coordinates ?? "Inner court / central axis"}</span>
       </div>
+
+      <PhotoGallery landmark={landmark} language={language} />
 
       <button
         className={"discover-button" + (discovered ? " is-discovered" : "")}

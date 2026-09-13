@@ -938,8 +938,8 @@
 
 .site-inspector__location {
   gap: 7px;
-  margin-top: auto;
-  padding-top: 23px;
+  margin-top: 21px;
+  padding-top: 0;
   color: var(--atlas-dim);
 }
 
@@ -4847,6 +4847,205 @@
 @media (prefers-reduced-motion: reduce) {
   .journal-gallery-card,
   .journal-gallery-card__scene-marker {
+    animation: none;
+    transition: none;
+  }
+}
+
+
+.site-inspector__context {
+  margin-top: 22px;
+  padding: 14px 12px 15px;
+  border-top: 1px solid var(--atlas-line);
+  border-bottom: 1px solid var(--atlas-line);
+}
+
+.site-inspector__context .micro {
+  color: var(--atlas-gold-light);
+  font-size: 0.55rem;
+}
+
+.site-inspector__context p {
+  margin: 7px 0 0;
+  color: var(--atlas-muted);
+  font-family: var(--atlas-serif);
+  font-size: 0.78rem;
+  line-height: 1.66;
+}
+
+.site-inspector__photos {
+  margin-top: 22px;
+}
+
+.site-inspector__photos-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.site-inspector__photos-heading h3 {
+  margin: 7px 0 0;
+  color: var(--atlas-paper);
+  font-family: var(--atlas-serif);
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.site-inspector__photos-source {
+  color: var(--atlas-dim);
+  font-family: var(--atlas-mono);
+  font-size: 0.48rem;
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.site-inspector__photo-grid,
+.site-inspector__photo-loading {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.site-inspector__photo {
+  min-width: 0;
+  margin: 0;
+}
+
+.site-inspector__photo > a {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1.12;
+  border: 1px solid var(--atlas-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.site-inspector__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.78) sepia(0.08);
+  transition: transform 300ms ease, filter 300ms ease;
+}
+
+.site-inspector__photo > a:hover img,
+.site-inspector__photo > a:focus-visible img {
+  filter: saturate(1) sepia(0);
+  transform: scale(1.045);
+}
+
+.site-inspector__photo > a > span {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border: 1px solid rgba(240, 222, 172, 0.45);
+  color: var(--atlas-paper);
+  background: rgba(10, 16, 14, 0.78);
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.site-inspector__photo > a:hover > span,
+.site-inspector__photo > a:focus-visible > span {
+  opacity: 1;
+}
+
+.site-inspector__photo figcaption {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+  min-width: 0;
+}
+
+.site-inspector__photo figcaption strong {
+  color: var(--atlas-gold-light);
+  font-family: var(--atlas-mono);
+  font-size: 0.52rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.site-inspector__photo figcaption span {
+  overflow: hidden;
+  color: var(--atlas-dim);
+  font-size: 0.5rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-inspector__photo-credit {
+  margin: 10px 0 0;
+  color: var(--atlas-dim);
+  font-size: 0.51rem;
+  line-height: 1.45;
+}
+
+.site-inspector__photo-loading > span {
+  aspect-ratio: 1.12;
+  border: 1px solid var(--atlas-line);
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.025) 25%, rgba(226, 174, 83, 0.1) 45%, rgba(255, 255, 255, 0.025) 65%);
+  background-size: 220% 100%;
+  animation: inspector-photo-pulse 1.6s ease-in-out infinite;
+}
+
+.site-inspector__photo-loading > span:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.site-inspector__photo-loading > span:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+.site-inspector__photo-empty {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--atlas-line);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.site-inspector__photo-empty p {
+  margin: 0;
+  color: var(--atlas-dim);
+  font-size: 0.59rem;
+  line-height: 1.5;
+}
+
+.site-inspector__photo-empty a {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--atlas-gold-light);
+  font-family: var(--atlas-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes inspector-photo-pulse {
+  0%, 100% {
+    background-position: 100% 0;
+  }
+
+  50% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-inspector__photo img,
+  .site-inspector__photo-loading > span {
     animation: none;
     transition: none;
   }
