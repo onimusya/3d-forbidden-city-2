@@ -4915,7 +4915,7 @@
   margin: 0;
 }
 
-.site-inspector__photo > a {
+.site-inspector__photo > :is(a, .site-inspector__photo-trigger) {
   position: relative;
   display: block;
   overflow: hidden;
@@ -4933,13 +4933,13 @@
   transition: transform 300ms ease, filter 300ms ease;
 }
 
-.site-inspector__photo > a:hover img,
-.site-inspector__photo > a:focus-visible img {
+.site-inspector__photo > :is(a, .site-inspector__photo-trigger):hover img,
+.site-inspector__photo > :is(a, .site-inspector__photo-trigger):focus-visible img {
   filter: saturate(1) sepia(0);
   transform: scale(1.045);
 }
 
-.site-inspector__photo > a > span {
+.site-inspector__photo > :is(a, .site-inspector__photo-trigger) > span {
   position: absolute;
   right: 6px;
   bottom: 5px;
@@ -4956,8 +4956,8 @@
   transition: opacity 180ms ease;
 }
 
-.site-inspector__photo > a:hover > span,
-.site-inspector__photo > a:focus-visible > span {
+.site-inspector__photo > :is(a, .site-inspector__photo-trigger):hover > span,
+.site-inspector__photo > :is(a, .site-inspector__photo-trigger):focus-visible > span {
   opacity: 1;
 }
 
@@ -5047,6 +5047,242 @@
   .site-inspector__photo img,
   .site-inspector__photo-loading > span {
     animation: none;
+    transition: none;
+  }
+}
+
+
+.site-inspector__photo-trigger {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.site-photo-lightbox {
+  position: fixed;
+  z-index: 96;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.site-photo-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: rgba(4, 9, 8, 0.84);
+  backdrop-filter: blur(9px);
+  cursor: default;
+}
+
+.site-photo-lightbox__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  max-height: calc(100dvh - 44px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid rgba(226, 174, 83, 0.34);
+  background: linear-gradient(145deg, rgba(25, 33, 29, 0.99), rgba(9, 15, 14, 0.99));
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.42);
+}
+
+.site-photo-lightbox__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.site-photo-lightbox__header h3 {
+  margin: 7px 0 0;
+  color: var(--atlas-paper);
+  font-family: var(--atlas-serif);
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.site-photo-lightbox__stage {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.site-photo-lightbox__arrow {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--atlas-line);
+  color: var(--atlas-paper);
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+
+.site-photo-lightbox__arrow:hover:not(:disabled),
+.site-photo-lightbox__arrow:focus-visible:not(:disabled) {
+  border-color: var(--atlas-gold);
+  color: var(--atlas-gold-light);
+  background: rgba(226, 174, 83, 0.1);
+}
+
+.site-photo-lightbox__arrow:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
+.site-photo-lightbox__figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.site-photo-lightbox__image-wrap {
+  display: grid;
+  min-height: 260px;
+  max-height: min(62dvh, 560px);
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--atlas-line);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.site-photo-lightbox__image-wrap img {
+  display: block;
+  width: 100%;
+  height: min(62dvh, 560px);
+  object-fit: contain;
+}
+
+.site-photo-lightbox__figure figcaption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 10px;
+}
+
+.site-photo-lightbox__figure figcaption > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.site-photo-lightbox__figure figcaption strong {
+  color: var(--atlas-gold-light);
+  font-family: var(--atlas-mono);
+  font-size: 0.56rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.site-photo-lightbox__figure figcaption span {
+  overflow: hidden;
+  color: var(--atlas-dim);
+  font-size: 0.6rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-photo-lightbox__figure figcaption a {
+  flex: 0 0 auto;
+  color: var(--atlas-gold-light);
+  font-family: var(--atlas-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-photo-lightbox__thumbs {
+  display: flex;
+  gap: 7px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--atlas-gold) transparent;
+}
+
+.site-photo-lightbox__thumb {
+  position: relative;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 52px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--atlas-line);
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  opacity: 0.52;
+  transition: border-color 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.site-photo-lightbox__thumb:hover,
+.site-photo-lightbox__thumb:focus-visible,
+.site-photo-lightbox__thumb.is-active {
+  border-color: var(--atlas-gold);
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.site-photo-lightbox__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 560px) {
+  .site-photo-lightbox {
+    padding: 10px;
+  }
+
+  .site-photo-lightbox__dialog {
+    max-height: calc(100dvh - 20px);
+    padding: 15px;
+  }
+
+  .site-photo-lightbox__stage {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    gap: 6px;
+  }
+
+  .site-photo-lightbox__arrow {
+    width: 32px;
+    height: 32px;
+  }
+
+  .site-photo-lightbox__image-wrap {
+    min-height: 200px;
+    max-height: 52dvh;
+  }
+
+  .site-photo-lightbox__image-wrap img {
+    height: 52dvh;
+  }
+
+  .site-photo-lightbox__figure figcaption {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-photo-lightbox__arrow,
+  .site-photo-lightbox__thumb,
+  .site-inspector__photo img {
     transition: none;
   }
 }

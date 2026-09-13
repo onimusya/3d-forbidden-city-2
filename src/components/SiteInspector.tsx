@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react"
-import { Check, MapPin, Share2, Sparkles, X } from "lucide-react"
+import { createPortal } from "react-dom"
+import { Check, ChevronLeft, ChevronRight, MapPin, Share2, Sparkles, X } from "lucide-react"
 
 import { commonsSearchUrl, fetchCommonsPhotos, type CommonsPhoto } from "../lib/commonsPhotos"
 
@@ -42,12 +43,14 @@ function PhotoGallery({ landmark, language }: { landmark: Landmark; language: In
   const titleId = useId()
   const [photos, setPhotos] = useState<CommonsPhoto[]>([])
   const [status, setStatus] = useState<"loading" | "ready" | "empty" | "error">("loading")
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const isChinese = language === "zh"
 
   useEffect(() => {
     const controller = new AbortController()
     setPhotos([])
     setStatus("loading")
+    setActiveIndex(null)
 
     fetchCommonsPhotos(landmark.name, landmark.chineseName, controller.signal)
       .then((nextPhotos) => {
@@ -62,8 +65,37 @@ function PhotoGallery({ landmark, language }: { landmark: Landmark; language: In
     return () => controller.abort()
   }, [landmark.chineseName, landmark.id, landmark.name])
 
+  useEffect(() => {
+    if (activeIndex === null) return undefined
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        setActiveIndex(null)
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault()
+        movePhoto(-1)
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault()
+        movePhoto(1)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [activeIndex, photos.length])
+
+  const activePhoto = activeIndex === null ? null : photos[activeIndex] ?? null
+
+  function movePhoto(direction: -1 | 1) {
+    if (!photos.length) return
+    setActiveIndex((current) => ((current ?? 0) + direction + photos.length) % photos.length)
+  }
+
   return (
-    <section className="site-inspector__photos" aria-labelledby={titleId}>
+    <>
+      <section className="site-inspector__photos" aria-labelledby={titleId}>
       <div className="site-inspector__photos-heading">
         <div>
           <span className="micro">{isChinese ? "现场照片 /" : "Photo log /"} 03</span>
@@ -82,12 +114,17 @@ function PhotoGallery({ landmark, language }: { landmark: Landmark; language: In
 
       {status === "ready" ? (
         <div className="site-inspector__photo-grid">
-          {photos.map((photo) => (
+          {photos.map((photo, index) => (
             <figure className="site-inspector__photo" key={photo.id}>
-              <a href={photo.sourceUrl} target="_blank" rel="noreferrer" aria-label={(isChinese ? "在 Wikimedia Commons 查看 " : "View source for ") + photo.title}>
+              <button
+                className="site-inspector__photo-trigger"
+                type="button"
+                aria-label={(isChinese ? "放大查看 " : "Open photo ") + String(index + 1) + ": " + photo.title}
+                onClick={() => setActiveIndex(index)}
+              >
                 <img src={photo.imageUrl} alt={photo.alt} loading="lazy" decoding="async" />
                 <span aria-hidden="true">↗</span>
-              </a>
+              </button>
               <figcaption>
                 <strong>{photo.year ?? (isChinese ? "年代未知" : "Date unknown")}</strong>
                 <span>{photo.artist}</span>
@@ -112,6 +149,93 @@ function PhotoGallery({ landmark, language }: { landmark: Landmark; language: In
         </p>
       ) : null}
     </section>
+
+        {activePhoto ? createPortal(
+          <div className="site-photo-lightbox">
+            <button
+              className="site-photo-lightbox__backdrop"
+              type="button"
+              aria-label={isChinese ? "关闭照片查看器" : "Close photo viewer"}
+              onClick={() => setActiveIndex(null)}
+            />
+            <section
+              className="site-photo-lightbox__dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId + "-lightbox"}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="site-photo-lightbox__header">
+                <div>
+                  <span className="micro">{isChinese ? "现场影像 /" : "Field image /"} {String((activeIndex ?? 0) + 1).padStart(2, "0")} / {String(photos.length).padStart(2, "0")}</span>
+                  <h3 id={titleId + "-lightbox"}>{isChinese ? "在现场停留。" : "Stay with the place."}</h3>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  autoFocus
+                  aria-label={isChinese ? "关闭照片查看器" : "Close photo viewer"}
+                  onClick={() => setActiveIndex(null)}
+                >
+                  <X size={17} strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="site-photo-lightbox__stage">
+                <button
+                  className="site-photo-lightbox__arrow"
+                  type="button"
+                  aria-label={isChinese ? "上一张照片" : "Previous photo"}
+                  onClick={() => movePhoto(-1)}
+                  disabled={photos.length < 2}
+                >
+                  <ChevronLeft size={19} strokeWidth={1.4} aria-hidden="true" />
+                </button>
+                <figure className="site-photo-lightbox__figure">
+                  <div className="site-photo-lightbox__image-wrap">
+                    <img src={activePhoto.imageUrl} alt={activePhoto.alt} />
+                  </div>
+                  <figcaption>
+                    <div>
+                      <strong>{activePhoto.year ?? (isChinese ? "年代未知" : "Date unknown")}</strong>
+                      <span>{activePhoto.artist} · {activePhoto.license}</span>
+                    </div>
+                    <a href={activePhoto.sourceUrl} target="_blank" rel="noreferrer">
+                      {isChinese ? "查看来源" : "View source"} <span aria-hidden="true">↗</span>
+                    </a>
+                  </figcaption>
+                </figure>
+                <button
+                  className="site-photo-lightbox__arrow"
+                  type="button"
+                  aria-label={isChinese ? "下一张照片" : "Next photo"}
+                  onClick={() => movePhoto(1)}
+                  disabled={photos.length < 2}
+                >
+                  <ChevronRight size={19} strokeWidth={1.4} aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="site-photo-lightbox__thumbs" role="list" aria-label={isChinese ? "照片缩略图" : "Photo thumbnails"}>
+                {photos.map((photo, index) => (
+                  <button
+                    className={"site-photo-lightbox__thumb" + (index === activeIndex ? " is-active" : "")}
+                    type="button"
+                    role="listitem"
+                    aria-label={(isChinese ? "查看照片 " : "View photo ") + String(index + 1)}
+                    aria-current={index === activeIndex ? "true" : undefined}
+                    onClick={() => setActiveIndex(index)}
+                    key={photo.id}
+                  >
+                    <img src={photo.imageUrl} alt="" />
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>,
+          document.body,
+        ) : null}
+    </>
   )
 }
 
@@ -132,7 +256,10 @@ export function SiteInspector({
     if (!landmark || !isOpen) return undefined
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose()
+      if (event.key === "Escape") {
+        if (document.querySelector(".site-photo-lightbox")) return
+        onClose()
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
