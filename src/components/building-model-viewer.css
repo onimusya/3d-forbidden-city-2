@@ -1,0 +1,457 @@
+.model-view-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px 12px 13px;
+  border: 1px solid rgba(226, 174, 83, 0.34);
+  color: var(--atlas-paper);
+  background: rgba(226, 174, 83, 0.055);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.model-view-button:hover {
+  border-color: var(--atlas-gold);
+  background: rgba(226, 174, 83, 0.13);
+  transform: translateY(-1px);
+}
+
+.model-view-button > svg:first-child {
+  flex: 0 0 auto;
+  color: var(--atlas-gold);
+}
+
+.model-view-button > span:nth-child(2) {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.model-view-button strong {
+  color: var(--atlas-gold-light);
+  font-family: var(--atlas-mono);
+  font-size: 0.57rem;
+  font-weight: 400;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.model-view-button small {
+  color: var(--atlas-dim);
+  font-size: 0.58rem;
+  line-height: 1.35;
+}
+
+.model-view-button > span:last-child {
+  flex: 0 0 auto;
+  color: var(--atlas-dim);
+}
+
+.building-model-viewer {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--atlas-ink);
+}
+
+.building-model-viewer__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: rgba(4, 9, 8, 0.86);
+  backdrop-filter: blur(10px);
+  cursor: default;
+}
+
+.building-model-viewer__dialog {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(1220px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+  border: 1px solid rgba(226, 174, 83, 0.36);
+  background: linear-gradient(145deg, rgba(25, 34, 30, 0.99), rgba(8, 14, 13, 0.99));
+  box-shadow: 0 32px 110px rgba(0, 0, 0, 0.52), inset 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.building-model-viewer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 22px 17px;
+  border-bottom: 1px solid var(--atlas-line);
+}
+
+.building-model-viewer__header h2 {
+  margin: 8px 0 0;
+  color: var(--atlas-paper);
+  font-size: clamp(1.65rem, 3.2vw, 2.45rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.building-model-viewer__header p {
+  max-width: 560px;
+  margin: 10px 0 0;
+  color: var(--atlas-muted);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.building-model-viewer__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.62fr) minmax(250px, 0.72fr);
+  min-height: 0;
+  overflow: auto;
+}
+
+.building-model-viewer__stage {
+  position: relative;
+  min-height: 580px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(226, 174, 83, 0.09), transparent 34%),
+    linear-gradient(135deg, rgba(17, 30, 25, 0.96), rgba(8, 14, 14, 0.98));
+}
+
+.building-model-viewer__stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 580px;
+}
+
+.building-model-viewer__stage::after {
+  position: absolute;
+  right: 18px;
+  bottom: 17px;
+  left: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(226, 174, 83, 0.35), transparent);
+  content: '';
+  pointer-events: none;
+}
+
+.building-model-viewer__stage-label {
+  position: absolute;
+  right: 18px;
+  bottom: 27px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(241, 238, 229, 0.68);
+  font-family: var(--atlas-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.building-model-viewer__stage-label svg {
+  color: var(--atlas-gold);
+}
+
+.building-model-viewer__notes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 25px 22px 22px;
+  border-left: 1px solid var(--atlas-line);
+  background: rgba(7, 13, 12, 0.35);
+}
+
+.building-model-viewer__note-heading,
+.building-model-viewer__reference-heading,
+.building-model-viewer__reference-heading .micro {
+  display: flex;
+  align-items: center;
+}
+
+.building-model-viewer__note-heading {
+  gap: 8px;
+  color: var(--atlas-gold);
+}
+
+.building-model-viewer__note-heading .micro {
+  color: var(--atlas-gold-light);
+}
+
+.building-model-viewer__notes h3 {
+  margin: 20px 0 0;
+  color: var(--atlas-paper);
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.building-model-viewer__model-note {
+  margin: 12px 0 0;
+  color: var(--atlas-muted);
+  font-family: var(--atlas-serif);
+  font-size: 0.82rem;
+  line-height: 1.52;
+}
+
+.building-model-viewer__specs {
+  display: grid;
+  gap: 13px;
+  margin-top: 23px;
+  padding: 14px 0;
+  border-top: 1px solid var(--atlas-line);
+  border-bottom: 1px solid var(--atlas-line);
+}
+
+.building-model-viewer__specs > div {
+  display: grid;
+  gap: 5px;
+}
+
+.building-model-viewer__specs .micro {
+  color: var(--atlas-dim);
+  font-size: 0.5rem;
+}
+
+.building-model-viewer__specs strong {
+  color: var(--atlas-paper);
+  font-family: var(--atlas-serif);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.36;
+}
+
+.building-model-viewer__reference {
+  margin-top: auto;
+  padding-top: 23px;
+}
+
+.building-model-viewer__reference-heading {
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--atlas-dim);
+  font-family: var(--atlas-mono);
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.building-model-viewer__reference-heading .micro {
+  gap: 6px;
+  color: var(--atlas-gold-light);
+  font-size: 0.52rem;
+}
+
+.building-model-viewer__reference-photo {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1.38;
+  margin-top: 11px;
+  border: 1px solid var(--atlas-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.building-model-viewer__reference-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.78) sepia(0.08);
+  transition: transform 300ms ease, filter 300ms ease;
+}
+
+.building-model-viewer__reference-photo:hover img,
+.building-model-viewer__reference-photo:focus-visible img {
+  filter: saturate(1) sepia(0);
+  transform: scale(1.04);
+}
+
+.building-model-viewer__reference-open {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px;
+  color: var(--atlas-paper);
+  background: rgba(7, 12, 11, 0.82);
+  font-family: var(--atlas-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.building-model-viewer__reference-loading {
+  aspect-ratio: 1.38;
+  margin-top: 11px;
+  border: 1px solid var(--atlas-line);
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.025) 25%, rgba(226, 174, 83, 0.11) 45%, rgba(255, 255, 255, 0.025) 65%);
+  background-size: 220% 100%;
+  animation: building-viewer-reference-pulse 1.6s ease-in-out infinite;
+}
+
+.building-model-viewer__reference-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--atlas-gold-light);
+  font-family: var(--atlas-mono);
+  font-size: 0.53rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.building-model-viewer__reference-credit {
+  margin: 8px 0 0;
+  color: var(--atlas-dim);
+  font-size: 0.49rem;
+  line-height: 1.4;
+}
+
+.building-model-viewer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 51px;
+  padding: 11px 22px;
+  border-top: 1px solid var(--atlas-line);
+  color: var(--atlas-dim);
+  font-family: var(--atlas-mono);
+  font-size: 0.51rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.building-model-viewer__footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.building-model-viewer__footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  color: var(--atlas-gold-light);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.building-model-viewer__footer button:hover {
+  color: var(--atlas-ink);
+}
+
+@keyframes building-viewer-reference-pulse {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0 0; }
+}
+
+@media (max-width: 820px) {
+  .building-model-viewer {
+    padding: 10px;
+  }
+
+  .building-model-viewer__dialog {
+    max-height: calc(100dvh - 20px);
+  }
+
+  .building-model-viewer__header {
+    padding: 16px 16px 14px;
+  }
+
+  .building-model-viewer__body {
+    display: block;
+  }
+
+  .building-model-viewer__stage,
+  .building-model-viewer__stage canvas {
+    min-height: min(56dvh, 490px);
+    height: min(56dvh, 490px) !important;
+  }
+
+  .building-model-viewer__notes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(145px, 0.68fr);
+    gap: 0 15px;
+    padding: 18px 16px 17px;
+    border-top: 1px solid var(--atlas-line);
+    border-left: 0;
+  }
+
+  .building-model-viewer__note-heading,
+  .building-model-viewer__notes h3,
+  .building-model-viewer__model-note,
+  .building-model-viewer__specs {
+    grid-column: 1;
+  }
+
+  .building-model-viewer__reference {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .building-model-viewer__footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px 14px;
+  }
+}
+
+@media (max-width: 500px) {
+  .building-model-viewer__stage,
+  .building-model-viewer__stage canvas {
+    min-height: 310px;
+    height: 310px !important;
+  }
+
+  .building-model-viewer__notes {
+    display: block;
+  }
+
+  .building-model-viewer__reference {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--atlas-line);
+  }
+
+  .building-model-viewer__reference-photo {
+    max-height: 180px;
+  }
+
+  .building-model-viewer__reference-photo img {
+    object-position: center 38%;
+  }
+
+  .building-model-viewer__footer {
+    font-size: 0.47rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .building-model-viewer__reference-photo img,
+  .building-model-viewer__reference-loading {
+    animation: none;
+    transition: none;
+  }
+}

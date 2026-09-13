@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronLeft, ChevronRight, MapPin, Share2, Sparkles, X } from "lucide-react"
+import { Box, Check, ChevronLeft, ChevronRight, MapPin, Share2, Sparkles, X } from "lucide-react"
 
 import { commonsSearchUrl, fetchCommonsPhotos, type CommonsPhoto } from "../lib/commonsPhotos"
 
@@ -35,6 +35,7 @@ export interface SiteInspectorProps {
   onClose: () => void
   onDiscover?: (landmark: Landmark) => void
   onPostcard?: (landmark: Landmark) => void
+  onViewModel?: (landmark: Landmark) => void
   isDiscovering?: boolean
 }
 
@@ -246,6 +247,7 @@ export function SiteInspector({
   onClose,
   onDiscover,
   onPostcard,
+  onViewModel,
   isDiscovering = false,
 }: SiteInspectorProps) {
   const titleId = useId()
@@ -257,7 +259,7 @@ export function SiteInspector({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        if (document.querySelector(".site-photo-lightbox")) return
+        if (document.querySelector(".site-photo-lightbox, .building-model-viewer")) return
         onClose()
       }
     }
@@ -337,6 +339,17 @@ export function SiteInspector({
           <span className="micro">{isChinese ? "建筑故事" : "Deeper context"}</span>
           <p>{context}</p>
         </div>
+      ) : null}
+
+      {onViewModel ? (
+        <button className="model-view-button" type="button" onClick={() => onViewModel(landmark)}>
+          <Box size={15} strokeWidth={1.5} aria-hidden="true" />
+          <span>
+            <strong>{isChinese ? "查看建筑三维模型" : "View this building in 3D"}</strong>
+            <small>{isChinese ? "参考现场照片的可旋转建筑研究" : "Rotate a photo-referenced architectural study"}</small>
+          </span>
+          <span aria-hidden="true">↗</span>
+        </button>
       ) : null}
 
       <div className="site-inspector__location">

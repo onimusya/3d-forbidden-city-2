@@ -8,6 +8,7 @@ import { DiscoveryRail, type DiscoveryLandmark } from "./components/DiscoveryRai
 import { createPostcardUrl, FieldPostcard, parsePostcardRequest, type FieldPostcardTarget, type PostcardRequest } from "./components/FieldPostcard"
 import { InteractionHint } from "./components/InteractionHint"
 import { ProgressPage } from "./components/ProgressPage"
+import { BuildingModelViewer } from "./components/BuildingModelViewer"
 import { SiteInspector } from "./components/SiteInspector"
 import { TopBar, type AtlasLanguage, type AtlasNavItem } from "./components/TopBar"
 import type { Landmark } from "./data/landmarks"
@@ -71,6 +72,7 @@ const PROGRESS_HISTORY_ZH = [
   { label: "把这一刻带走", summary: "地标印记与完成的游线现在可以变成明信片，分享、下载，或通过链接重新打开。" },
   { label: "给记忆一间房", summary: "图鉴现在以视觉记忆架开始，保存地标印记与游线徽章，并支持按类型、季节和昼夜筛选。" },
   { label: "让每个地点开口", summary: "每座地标现在都有更深入的双语背景，并在打开时加载带有来源与日期的现场照片。" },
+  { label: "走进建筑形制", summary: "每座地标现在都可以打开独立的三维研究模型，并在模型旁对照来自 Wikimedia Commons 的现场照片。" },
 ] as const
 
 function toUiLandmark(landmark: Landmark, discoveredIds: readonly string[], language: 'en' | 'zh'): DiscoveryLandmark {
@@ -309,6 +311,7 @@ export default function App() {
   const [routeStopIndex, setRouteStopIndex] = useState(0)
   const [journalOpen, setJournalOpen] = useState(false)
   const [postcardRequest, setPostcardRequest] = useState<PostcardRequest | null>(() => parsePostcardRequest())
+  const [modelViewerId, setModelViewerId] = useState<string | null>(null)
   const {
     selectedId,
     hoveredId,
@@ -349,6 +352,10 @@ export default function App() {
   const selectedLandmark = useMemo(
     () => LANDMARKS.find((landmark) => landmark.id === selectedId) ?? null,
     [selectedId],
+  )
+  const modelViewerLandmark = useMemo(
+    () => LANDMARKS.find((landmark) => landmark.id === modelViewerId) ?? null,
+    [modelViewerId],
   )
   const activeRoute = useMemo(
     () => PROCESSION_ROUTES.find((route) => route.id === activeRouteId) ?? null,
@@ -680,6 +687,16 @@ export default function App() {
     setSelected(null)
   }
 
+  const handleOpenModelViewer = (id: string) => {
+    playSfx("open")
+    setModelViewerId(id)
+  }
+
+  const handleCloseModelViewer = () => {
+    playSfx("close")
+    setModelViewerId(null)
+  }
+
   const handleSoundToggle = () => {
     if (!soundEnabled) startBgm(true)
     toggleSound()
@@ -812,9 +829,12 @@ export default function App() {
             onClose={handleCloseInspector}
             onDiscover={(landmark) => handleDiscover(landmark.id)}
             onPostcard={(landmark) => handleOpenLandmarkPostcard(landmark.id)}
+            onViewModel={(landmark) => handleOpenModelViewer(landmark.id)}
           />
         )}
       </div>
+
+      <BuildingModelViewer landmark={modelViewerLandmark} language={language} season={season} onClose={handleCloseModelViewer} />
 
       <ProcessionPicker isOpen={routePickerOpen} language={language} routeProgress={routeProgress} onClose={() => setRoutePickerOpen(false)} onStart={handleStartRoute} onResume={handleResumeRoute} />
 
@@ -837,7 +857,7 @@ export default function App() {
         history={progressHistory}
         currentRound={PROGRESS_HISTORY.at(-1)?.round ?? 1}
         language={language}
-        remainingGaps={language === 'zh' ? ['继续优化低功耗设备上的 WebGL 构图与纹理内存。', '为分享的时刻建立公开图鉴画廊。', '增加全屏照片灯箱，用于对照现场影像。'] : ['Tune low-power WebGL framing and texture memory.', 'Add a public gallery for shared moments.', 'Add a full-screen photo lightbox for comparing references.']}
+        remainingGaps={language === "zh" ? ["继续优化低功耗设备上的 WebGL 构图与纹理内存。", "为分享的时刻建立公开图鉴画廊。", "为重点宫殿补充测绘级几何。"] : ["Tune low-power WebGL framing and texture memory.", "Add a public gallery for shared moments.", "Increase fidelity with surveyed geometry for the key halls."]}
       />
 
       {toast && (
