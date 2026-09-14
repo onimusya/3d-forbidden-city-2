@@ -99,7 +99,7 @@ function PhotoGallery({ landmark, language }: { landmark: Landmark; language: In
       <section className="site-inspector__photos" aria-labelledby={titleId}>
       <div className="site-inspector__photos-heading">
         <div>
-          <span className="micro">{isChinese ? "现场照片 /" : "Photo log /"} 03</span>
+          <span className="micro">{isChinese ? "现场照片 /" : "Photo log /"} 04</span>
           <h3 id={titleId}>{isChinese ? "最近的现场影像" : "Recent field photographs"}</h3>
         </div>
         <span className="site-inspector__photos-source">Wikimedia Commons</span>

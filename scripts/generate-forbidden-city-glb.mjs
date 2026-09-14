@@ -18,6 +18,7 @@ if (typeof globalThis.FileReader === 'undefined') {
 
 const rootDir = resolve(import.meta.dirname, '..')
 const outputPath = resolve(rootDir, 'public/models/forbidden-city-atlas.glb')
+const studyOutputPath = resolve(rootDir, 'public/models/meridian-gate-study.glb')
 
 const scene = new THREE.Scene()
 scene.name = 'Forbidden City Atlas'
@@ -44,6 +45,18 @@ function material(color, { roughness = 0.8, metalness = 0, emissive = null } = {
 function geometry(key, create) {
   if (!geometries.has(key)) geometries.set(key, create())
   return geometries.get(key)
+}
+
+function createArchOpeningGeometry(width, height, depth) {
+  const radius = width / 2
+  const springLine = Math.max(radius + 0.04, height - radius)
+  const shape = new THREE.Shape()
+  shape.moveTo(-radius, 0)
+  shape.lineTo(-radius, springLine)
+  shape.absarc(0, springLine, radius, Math.PI, 0, false)
+  shape.lineTo(radius, 0)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 18 })
 }
 
 function meshBox(size, color, position, parent, options = {}) {
@@ -278,7 +291,11 @@ function gateHouse({ id, position, rotation = 0, width = 7.8, depth = 3.25, roof
   const doorCount = isMeridian ? 5 : 1
   for (let index = 0; index < doorCount; index += 1) {
     const x = isMeridian ? -width * 0.33 + (index / Math.max(1, doorCount - 1)) * width * 0.66 : 0
-    meshBox([isMeridian ? width * 0.105 : width * 0.34, 1.08, 0.035], '#1b2522', [x, bodyBase + 0.3, depth * 0.425], group, { roughness: 0.72 })
+    if (isMeridian) {
+      meshGeometry(createArchOpeningGeometry(width * 0.105, 1.08, 0.08), '#1b2522', [x, bodyBase + 0.3, depth * 0.425], group, { roughness: 0.72 })
+    } else {
+      meshBox([width * 0.34, 1.08, 0.035], '#1b2522', [x, bodyBase + 0.3, depth * 0.425], group, { roughness: 0.72 })
+    }
   }
   for (let index = 0; index < doorCount; index += 1) {
     const x = isMeridian ? -width * 0.33 + (index / Math.max(1, doorCount - 1)) * width * 0.66 : width * -0.11
@@ -295,6 +312,16 @@ function gateHouse({ id, position, rotation = 0, width = 7.8, depth = 3.25, roof
     const centralRoof = chineseRoof({ width: width * 0.34, depth: depth * 1.04, y: 2.7, color: roofColor, ridgeColor: '#e2ae53', parent: group, scale: 0.82 })
     centralRoof.position.x = 0
     meshCylinder(0.09, 0.13, 0.42, 6, '#e2ae53', [0, 3.22, 0], group, { roughness: 0.4, metalness: 0.4 })
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Group()
+      wing.name = "meridian-wing-" + side
+      wing.position.set(side * width * 0.54, 0.06, -depth * 0.12)
+      wing.rotation.y = side * 0.12
+      group.add(wing)
+      meshBox([width * 0.24, 1.34, depth * 0.9], '#773027', [0, bodyBase + 0.67, 0], wing, { roughness: 0.8 })
+      meshBox([width * 0.28, 0.13, depth * 0.98], '#cc9344', [0, bodyBase + 1.38, 0], wing, { roughness: 0.56, metalness: 0.18 })
+      chineseRoof({ width: width * 0.34, depth: depth * 0.98, y: 2.16, color: roofColor, ridgeColor: '#e2ae53', parent: wing })
+    }
   } else {
     chineseRoof({ width: width * 1.12, depth: depth * 1.25, y: 2.02, color: roofColor, ridgeColor: '#e2ae53', parent: group })
     meshCylinder(0.09, 0.13, 0.42, 6, '#e2ae53', [0, 2.53, 0], group, { roughness: 0.4, metalness: 0.4 })
@@ -487,3 +514,15 @@ await writeFile(outputPath, Buffer.from(data))
 console.log(`Wrote ${outputPath}`)
 console.log(`Bytes: ${data.byteLength}`)
 console.log(`Landmark groups: ${[...scene.children].filter((child) => child.name.startsWith('landmark:')).map((child) => child.name).join(', ')}`)
+
+const meridianGate = scene.getObjectByName('landmark:meridian-gate')
+if (!meridianGate) throw new Error('Meridian Gate group was not generated')
+const studyScene = new THREE.Scene()
+const studyModel = meridianGate.clone(true)
+studyModel.position.set(0, 0, 0)
+studyModel.rotation.set(0, 0, 0)
+studyScene.add(studyModel)
+const studyData = await exporter.parseAsync(studyScene, { binary: true, onlyVisible: true, trs: true, maxTextureSize: 1024 })
+await writeFile(studyOutputPath, Buffer.from(studyData))
+console.log('Wrote ' + studyOutputPath)
+console.log('Study bytes: ' + studyData.byteLength)

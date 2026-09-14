@@ -1,17 +1,40 @@
-import { ContactShadows, OrbitControls, PerspectiveCamera } from "@react-three/drei"
-import { Canvas, useFrame } from "@react-three/fiber"
-import { Box, ExternalLink, Image as ImageIcon, Rotate3d, X } from "lucide-react"
+import { ContactShadows, OrbitControls, PerspectiveCamera, useGLTF } from "@react-three/drei"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
+import { Box, Eye, ExternalLink, Image as ImageIcon, Rotate3d, X } from "lucide-react"
 import { createPortal } from "react-dom"
-import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react"
+import { Suspense, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react"
 import * as THREE from "three"
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib"
 
 import type { Landmark } from "../data/landmarks"
-import { commonsSearchUrl, fetchCommonsPhotos, type CommonsPhoto } from "../lib/commonsPhotos"
+import { commonsSearchUrl, fetchCommonsPhotos, type CommonsPhoto, type CommonsPhotoAngle } from "../lib/commonsPhotos"
 import type { Season } from "../store/atlasStore"
 import "./building-model-viewer.css"
 import { ChineseRoof, SeasonThemeProvider } from "./scene/primitives"
 
 type ViewerLanguage = "en" | "zh"
+
+const MERIDIAN_GATE_MODEL_URL = import.meta.env.BASE_URL + "models/meridian-gate-study.glb"
+
+type CameraPreset = "isometric" | "front" | "side" | "rear" | "elevated"
+
+const CAMERA_PRESETS: Record<CameraPreset, { position: [number, number, number]; target: [number, number, number] }> = {
+  isometric: { position: [14.5, 10.5, 15.5], target: [0, 1.8, 0] },
+  front: { position: [0, 6.6, 21], target: [0, 1.55, 0] },
+  side: { position: [21, 7.2, 0], target: [0, 1.55, 0] },
+  rear: { position: [0, 6.6, -21], target: [0, 1.55, 0] },
+  elevated: { position: [13.5, 18.5, 15.5], target: [0, 0.9, 0] },
+}
+
+const CAMERA_PRESET_ORDER: CameraPreset[] = ["isometric", "front", "side", "rear", "elevated"]
+
+const CAMERA_PRESET_LABELS: Record<CameraPreset, [string, string]> = {
+  isometric: ["Iso", "等轴"],
+  front: ["Front", "正面"],
+  side: ["Side", "侧面"],
+  rear: ["Rear", "背面"],
+  elevated: ["Roof", "俯视"],
+}
 
 export type BuildingModelViewerProps = {
   landmark: Landmark | null
@@ -466,12 +489,29 @@ function NineDragonWallModel() {
   )
 }
 
+function MeridianGateAsset() {
+  const { scene } = useGLTF(MERIDIAN_GATE_MODEL_URL)
+  const model = useMemo(() => {
+    const clone = scene.clone(true)
+    clone.traverse((object: THREE.Object3D) => {
+      if (!(object instanceof THREE.Mesh)) return
+      object.castShadow = true
+      object.receiveShadow = true
+    })
+    return clone
+  }, [scene])
+
+  return <primitive object={model} />
+}
+
+useGLTF.preload(MERIDIAN_GATE_MODEL_URL)
+
 function DetailedBuilding({ landmark, season }: { landmark: Landmark; season: Season }) {
   const profile = getModelProfile(landmark.id)
   let model: ReactElement
 
   if (profile.family === "meridian-gate") {
-    model = <MeridianGateModel />
+    model = <MeridianGateAsset />
   } else if (profile.family === "gate") {
     model = <GateBlock width={landmark.id === "gate-of-heavenly-purity" ? 8.8 : 9.6} depth={2.7} height={landmark.id === "gate-of-heavenly-purity" ? 2.55 : 2.8} openings={landmark.id === "east-flower-gate" ? 3 : 4} roofColor="#c69b39" />
   } else if (profile.family === "grand-hall") {
@@ -483,8 +523,15 @@ function DetailedBuilding({ landmark, season }: { landmark: Landmark; season: Se
   } else if (profile.family === "screen") {
     model = <NineDragonWallModel />
   } else {
-    const doubleEave = landmark.id === "palace-of-heavenly-purity"
-    model = <HallBuilding width={landmark.id === "hall-of-mental-cultivation" ? 7.1 : 7.9} depth={landmark.id === "hall-of-mental-cultivation" ? 4.55 : 5.1} height={landmark.id === "palace-of-heavenly-purity" ? 2.35 : 2.05} bays={landmark.id === "palace-of-heavenly-purity" ? 7 : 6} doubleEave={doubleEave} roofColor={landmark.id === "hall-of-literary-brilliance" ? "#2f6659" : "#c59638"} terraceLevels={2} />
+    const isHeavenlyPurity = landmark.id === "palace-of-heavenly-purity"
+    const isEarthlyTranquility = landmark.id === "palace-of-earthly-tranquility"
+    const isMentalCultivation = landmark.id === "hall-of-mental-cultivation"
+    const doubleEave = isHeavenlyPurity || isEarthlyTranquility
+    const width = isHeavenlyPurity ? 9.25 : isEarthlyTranquility ? 8.8 : isMentalCultivation ? 7.25 : 7.9
+    const depth = isHeavenlyPurity ? 5.5 : isEarthlyTranquility ? 5.25 : isMentalCultivation ? 4.55 : 5.1
+    const height = isHeavenlyPurity ? 2.35 : isEarthlyTranquility ? 2.15 : isMentalCultivation ? 2.05 : 2.05
+    const bays = isHeavenlyPurity || isEarthlyTranquility ? 9 : isMentalCultivation ? 7 : 6
+    model = <HallBuilding width={width} depth={depth} height={height} bays={bays} doubleEave={doubleEave} roofColor={landmark.id === "hall-of-literary-brilliance" ? "#2f6659" : "#c59638"} terraceLevels={2} />
   }
 
   return (
@@ -494,7 +541,42 @@ function DetailedBuilding({ landmark, season }: { landmark: Landmark; season: Se
   )
 }
 
-function ModelStage({ landmark, season }: { landmark: Landmark; season: Season }) {
+function CameraPresetRig({ preset }: { preset: CameraPreset }) {
+  const { camera } = useThree()
+  const controlsRef = useRef<OrbitControlsImpl | null>(null)
+  const targetRef = useRef(new THREE.Vector3(...CAMERA_PRESETS[preset].target))
+  const positionRef = useRef(new THREE.Vector3(...CAMERA_PRESETS[preset].position))
+  const animatingRef = useRef(true)
+
+  useEffect(() => {
+    const next = CAMERA_PRESETS[preset]
+    positionRef.current.set(...next.position)
+    targetRef.current.set(...next.target)
+    animatingRef.current = true
+    if (controlsRef.current) controlsRef.current.enabled = false
+  }, [preset])
+
+  useFrame((_, delta) => {
+    if (!animatingRef.current) return
+    const alpha = 1 - Math.pow(0.001, Math.min(delta, 0.05))
+    camera.position.lerp(positionRef.current, alpha)
+    if (controlsRef.current) {
+      controlsRef.current.target.lerp(targetRef.current, alpha)
+      controlsRef.current.update()
+    }
+    if (camera.position.distanceToSquared(positionRef.current) < 0.01 && (!controlsRef.current || controlsRef.current.target.distanceToSquared(targetRef.current) < 0.01)) {
+      camera.position.copy(positionRef.current)
+      controlsRef.current?.target.copy(targetRef.current)
+      controlsRef.current?.update()
+      if (controlsRef.current) controlsRef.current.enabled = true
+      animatingRef.current = false
+    }
+  })
+
+  return <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.08} enablePan minPolarAngle={0.42} maxPolarAngle={1.45} target={CAMERA_PRESETS[preset].target} />
+}
+
+function ModelStage({ landmark, season, cameraPreset }: { landmark: Landmark; season: Season; cameraPreset: CameraPreset }) {
   const modelRef = useRef<THREE.Group>(null)
 
   useFrame((_, delta) => {
@@ -515,55 +597,81 @@ function ModelStage({ landmark, season }: { landmark: Landmark; season: Season }
       </mesh>
       <gridHelper args={[18, 18, "#7d765e", "#3f4d41"]} position={[0, 0.01, 0]} />
       <group ref={modelRef}>
-        <DetailedBuilding landmark={landmark} season={season} />
+        <Suspense fallback={landmark.id === "meridian-gate" ? <MeridianGateModel /> : null}>
+          <DetailedBuilding landmark={landmark} season={season} />
+        </Suspense>
       </group>
       <ContactShadows position={[0, 0.05, 0]} opacity={0.52} scale={14} blur={2.8} far={8} resolution={512} color="#000000" />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} enablePan minPolarAngle={0.42} maxPolarAngle={1.45} target={[0, 1.8, 0]} />
+      <CameraPresetRig preset={cameraPreset} />
     </>
   )
 }
 
-function FieldReference({ landmark, language }: { landmark: Landmark; language: ViewerLanguage }) {
-  const [photo, setPhoto] = useState<CommonsPhoto | null>(null)
+function photoAngleLabel(angle: CommonsPhotoAngle | undefined, isChinese: boolean) {
+  const labels: Record<CommonsPhotoAngle, [string, string]> = {
+    front: ["Front", "正面"],
+    side: ["Side", "侧面"],
+    rear: ["Rear / inner court", "背面 / 内廷"],
+    elevated: ["Elevated", "俯视"],
+    courtyard: ["Courtyard", "院落"],
+    interior: ["Interior", "室内"],
+    detail: ["Detail", "细部"],
+    unknown: ["Field view", "现场视角"],
+  }
+  const [english, chinese] = labels[angle ?? "unknown"]
+  return isChinese ? chinese : english
+}
+
+function FieldReference({ landmark, language, onPhotosChange }: { landmark: Landmark; language: ViewerLanguage; onPhotosChange: (photos: CommonsPhoto[]) => void }) {
+  const [photos, setPhotos] = useState<CommonsPhoto[]>([])
   const [status, setStatus] = useState<"loading" | "ready" | "empty" | "error">("loading")
   const isChinese = language === "zh"
 
   useEffect(() => {
     const controller = new AbortController()
-    setPhoto(null)
+    setPhotos([])
+    onPhotosChange([])
     setStatus("loading")
     fetchCommonsPhotos(landmark.title, landmark.chineseName, controller.signal)
-      .then((photos) => {
+      .then((nextPhotos) => {
         if (controller.signal.aborted) return
-        setPhoto(photos[0] ?? null)
-        setStatus(photos.length ? "ready" : "empty")
+        setPhotos(nextPhotos)
+        onPhotosChange(nextPhotos)
+        setStatus(nextPhotos.length ? "ready" : "empty")
       })
       .catch(() => {
-        if (!controller.signal.aborted) setStatus("error")
+        if (!controller.signal.aborted) {
+          onPhotosChange([])
+          setStatus("error")
+        }
       })
     return () => controller.abort()
-  }, [landmark.chineseName, landmark.id, landmark.title])
+  }, [landmark.chineseName, landmark.id, landmark.title, onPhotosChange])
 
   return (
-    <section className="building-model-viewer__reference" aria-label={isChinese ? "现场参考照片" : "Field reference photograph"}>
+    <section className="building-model-viewer__reference" aria-label={isChinese ? "现场参考照片" : "Field reference photographs"}>
       <div className="building-model-viewer__reference-heading">
-        <span className="micro"><ImageIcon size={12} strokeWidth={1.5} aria-hidden="true" /> {isChinese ? "现场参考" : "Field reference"}</span>
+        <span className="micro"><ImageIcon size={12} strokeWidth={1.5} aria-hidden="true" /> {isChinese ? "多角度参考" : "Angle references"}</span>
         <span>{isChinese ? "Wikimedia Commons" : "Wikimedia Commons"}</span>
       </div>
       {status === "loading" ? <div className="building-model-viewer__reference-loading" aria-hidden="true" /> : null}
-      {photo ? (
-        <a className="building-model-viewer__reference-photo" href={photo.sourceUrl} target="_blank" rel="noreferrer">
-          <img src={photo.imageUrl} alt={photo.alt} />
-          <span className="building-model-viewer__reference-open"><ExternalLink size={12} strokeWidth={1.5} aria-hidden="true" /> {isChinese ? "查看原图" : "Open source"}</span>
-        </a>
+      {status === "ready" ? (
+        <div className="building-model-viewer__reference-grid">
+          {photos.map((photo) => (
+            <a className="building-model-viewer__reference-photo" href={photo.sourceUrl} target="_blank" rel="noreferrer" key={photo.id}>
+              <img src={photo.imageUrl} alt={photo.alt} />
+              <span className="building-model-viewer__reference-open"><ExternalLink size={11} strokeWidth={1.5} aria-hidden="true" /> {photoAngleLabel(photo.angle, isChinese)}</span>
+            </a>
+          ))}
+        </div>
       ) : null}
       {status === "empty" || status === "error" ? (
         <a className="building-model-viewer__reference-empty" href={commonsSearchUrl(landmark.title)} target="_blank" rel="noreferrer">
           {isChinese ? "打开公开图像档案" : "Open the public image archive"} <ExternalLink size={12} strokeWidth={1.5} aria-hidden="true" />
         </a>
       ) : null}
-      {photo ? (
-        <p className="building-model-viewer__reference-credit">{photo.year ?? (isChinese ? "年代未知" : "Date unknown")} · {photo.artist} · {photo.license}</p>
+      {status === "ready" && photos[0] ? (
+        <p className="building-model-viewer__reference-credit">{photos.length} {isChinese ? "个角度" : "angles"} · {photos[0].artist} · {photos[0].license}</p>
       ) : null}
     </section>
   )
@@ -573,6 +681,15 @@ export function BuildingModelViewer({ landmark, language, season, onClose }: Bui
   const titleId = useId()
   const profile = landmark ? getModelProfile(landmark.id) : DEFAULT_PROFILE
   const isChinese = language === "zh"
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>("isometric")
+  const [comparisonMode, setComparisonMode] = useState(false)
+  const [referencePhotos, setReferencePhotos] = useState<CommonsPhoto[]>([])
+
+  useEffect(() => {
+    setCameraPreset("isometric")
+    setComparisonMode(false)
+    setReferencePhotos([])
+  }, [landmark?.id])
 
   useEffect(() => {
     if (!landmark) return undefined
@@ -604,11 +721,27 @@ export function BuildingModelViewer({ landmark, language, season, onClose }: Bui
         </header>
 
         <div className="building-model-viewer__body">
-          <div className="building-model-viewer__stage">
+          <div className={"building-model-viewer__stage" + (comparisonMode && referencePhotos[0] ? " is-comparing" : "")}>
             <Canvas shadows dpr={[1, 1.6]} camera={{ position: [14.5, 10.5, 15.5], fov: 32, near: 0.1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}>
-              <ModelStage landmark={landmark} season={season} />
+              <ModelStage landmark={landmark} season={season} cameraPreset={cameraPreset} />
             </Canvas>
-            <div className="building-model-viewer__stage-label"><Rotate3d size={13} strokeWidth={1.5} aria-hidden="true" /> {isChinese ? "拖动旋转 · 滚轮缩放" : "Drag to orbit · scroll to zoom"}</div>
+            {comparisonMode && referencePhotos[0] ? (
+              <figure className="building-model-viewer__comparison-photo">
+                <img src={referencePhotos[0].imageUrl} alt={referencePhotos[0].alt} />
+                <figcaption><span>{isChinese ? "现场参考" : "Reference"}</span><strong>{photoAngleLabel(referencePhotos[0].angle, isChinese)}</strong></figcaption>
+              </figure>
+            ) : null}
+            <nav className="building-model-viewer__preset-bar" aria-label={isChinese ? "模型视角" : "Model camera presets"}>
+              {CAMERA_PRESET_ORDER.map((preset) => {
+                const [english, chinese] = CAMERA_PRESET_LABELS[preset]
+                return (
+                  <button key={preset} className={cameraPreset === preset ? "is-active" : ""} type="button" aria-pressed={cameraPreset === preset} onClick={() => setCameraPreset(preset)}>
+                    {isChinese ? chinese : english}
+                  </button>
+                )
+              })}
+            </nav>
+            <div className="building-model-viewer__stage-label"><Rotate3d size={13} strokeWidth={1.5} aria-hidden="true" /> {comparisonMode ? (isChinese ? "参考对照 · 拖动旋转" : "Reference split · drag to orbit") : (isChinese ? "拖动旋转 · 滚轮缩放" : "Drag to orbit · scroll to zoom")}</div>
           </div>
           <aside className="building-model-viewer__notes">
             <div className="building-model-viewer__note-heading">
@@ -620,9 +753,13 @@ export function BuildingModelViewer({ landmark, language, season, onClose }: Bui
             <div className="building-model-viewer__specs">
               <div><span className="micro">{isChinese ? "结构" : "Structure"}</span><strong>{isChinese ? profile.structureNoteZh : profile.structureNote}</strong></div>
               <div><span className="micro">{isChinese ? "朝向" : "Orientation"}</span><strong>{isChinese ? "南北中轴 / 礼制秩序" : "North–south axis / ritual order"}</strong></div>
-              <div><span className="micro">{isChinese ? "重建" : "Reconstruction"}</span><strong>{isChinese ? "比例化程序模型" : "Proportional procedural model"}</strong></div>
+              <div><span className="micro">{isChinese ? "重建" : "Reconstruction"}</span><strong>{landmark.id === "meridian-gate" ? (isChinese ? "参考资产 GLB" : "Reference-backed GLB") : (isChinese ? "比例化程序模型" : "Proportional procedural model")}</strong></div>
             </div>
-            <FieldReference landmark={landmark} language={language} />
+            <button className="building-model-viewer__compare-button" type="button" disabled={!referencePhotos.length} aria-pressed={comparisonMode} onClick={() => setComparisonMode((active) => !active)}>
+              <Eye size={14} strokeWidth={1.5} aria-hidden="true" />
+              {comparisonMode ? (isChinese ? "关闭参考对照" : "Hide reference") : (isChinese ? "对照现场参考" : "Compare reference")}
+            </button>
+            <FieldReference landmark={landmark} language={language} onPhotosChange={setReferencePhotos} />
           </aside>
         </div>
 
